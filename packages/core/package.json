@@ -1,0 +1,32 @@
+{
+  "name": "@icon-diet/core",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./bin/index.js",
+  "bin": {
+    "icon-diet": "./bin/index.js"
+  },
+  "scripts": {
+    "start": "node bin/index.js"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.4.0",
+    "acorn": "^8.11.0",
+    "acorn-walk": "^8.3.0",
+    "htmlparser2": "^9.1.0",
+    "@quasar/extras": "^2.0.1",
+    "@iconify-json/bi": "^1.2.0",
+    "@iconify-json/carbon": "^1.2.0",
+    "@iconify-json/fa6-solid": "^1.2.0",
+    "@iconify-json/heroicons-solid": "^1.2.0",
+    "@iconify-json/ic": "^1.2.0",
+    "@iconify-json/material-symbols": "^1.2.0",
+    "@iconify-json/mdi": "^1.2.0",
+    "@iconify-json/octicon": "^1.2.0",
+    "@iconify-json/ph": "^1.2.0",
+    "@iconify-json/pixelarticons": "^1.2.0",
+    "@iconify-json/ri": "^1.2.0"
+  }
+}

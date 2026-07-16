@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Diet</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧁</text></svg>">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="fonts/idiet.css">
+  <script type="module" src="app.js"></script>
+</head>
+
+<body>
+  <a href="https://github.com/CCTVcalc/icon-diet" class="github-corner" aria-label="View source on GitHub"><svg width="60" height="60" viewBox="0 0 250 250" style="fill:#333333; color:#fff; position: absolute; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style></a>
+  <div class="app-container">
+    <div class="left-panel">
+      <div class="left-panel-header">
+        <span class="left-panel-title">
+          Icon <span class="left-panel-title-2">Diet</span>
+        </span>
+        <div class="for-quasar">
+          for
+          <a href="https://quasar.dev" target="_blank" class="quasar-logo">
+            <img src="./assets/quasar-logo.svg" width="25" height="25">
+            <img src="./assets/quasar-text.svg" width="100">
+          </a>
+        </div>
+      </div>
+      <div class="left-panel-func">
+        <button class="left-panel-sort btn-flat-white" style="display: none;">Sort list</button>
+        <button class="left-panel-clear btn-flat-white" style="display: none;">Clear list</button>
+      </div>
+      <div class="left-panel-list-wrapper idt-scrollbar">
+        <div class="left-panel-list">
+          <!-- items from template create in js  -->
+        </div>
+        <details class="accordion base-icons-wrapper">
+          <summary class="accordion-header base-icons-title-wrapper">
+            <div class="base-icons-title">
+              Built-in Quasar icons
+            </div>
+          </summary>
+          <div class="accordion-content">
+            <div class="accordion-inner base-icons-list">
+              <!-- items from template create in js  -->
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="left-panel-footer">
+        <button class="btn-generate">Generate</button>
+        <button class="btn-flat-white btn-options" style="display: none;"></button>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <header class="top-toolbar">
+        <div class="top-toolbar-left">
+          <div class="main-search-container"></div>
+          <button class="btn-flat btn-filter"><i class="mdi-filter-outline btn-icon-only"></i></button>
+        </div>
+
+        <div class="toolbar-actions">
+          <button class="btn-flat btn-scan"><i class="material-symbols-scan-outline-rounded btn-icon"></i>Scan project</button>
+          <button class="btn-flat btn-upload"><i class="material-symbols-upload-2-outline-rounded btn-icon"></i>Upload icons</button>
+          <button class="btn-flat btn-my-icons"><i class="mdi-folder-outline btn-icon"></i>My icons</button>
+        </div>
+
+        <input type="file" id="icon-file-input" multiple accept=".svg" style="display: none;">
+      </header>
+
+      <div class="grid-container idt-scrollbar">
+        <!-- items from template create in js  -->
+      </div>
+    </main>
+  </div>
+
+  <!-- icon block for left panel -->
+  <template id="card-icon-out-item-template">
+    <div class="card-icon-out-item">
+      <div class="card-icon-out-placeholder"></div>
+      <div class="card-icon-out-info">
+        <div class="card-icon-out-fullname">
+          <div class="card-icon-out-name-prefix-wrapper">
+            <div class="card-icon-out-name-prefix-extra"></div>
+            <div class="card-icon-out-name-prefix"></div>
+            <div class="card-icon-out-name-separator"></div>
+          </div>
+          <div class="card-icon-out-name-wrapper">
+            <div class="card-icon-out-name"></div>
+            <i class="ic-outline-content-copy card-icon-btn-copy-name"></i>
+          </div>
+        </div>
+        <div class="card-icon-out-name-helper"></div>
+      </div>
+      <span class="remove-btn">
+        <i class="mdi-close"></i>
+      </span>
+    </div>
+  </template>
+
+  <!-- icon block for right panel in grid container -->
+  <template id="card-icon-item-template">
+    <div class="card-icon-item">
+      <div class="card-icon-placeholder"></div>
+      <div class="card-icon-info">
+        <div class="card-icon-fullname">
+          <div class="card-icon-name-prefix-wrapper">
+            <div class="card-icon-name-prefix-extra"></div>
+            <div class="card-icon-name-prefix"></div>
+            <div class="card-icon-name-separator"></div>
+          </div>
+          <div class="card-icon-name-wrapper">
+            <div class="card-icon-name"></div>
+            <i class="ic-outline-content-copy card-icon-btn-copy-name"></i>
+          </div>
+          <span class="card-icon-name"></span>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <dialog class="filter-dialog idt-dialog">
+    <div class="dialog-header">
+      <div class="dialog-header-checkbox"></div>
+      <div class="dialog-title">Icon packs</div>
+      <div class="dialog-search-container"></div>
+    </div>
+
+    <div class="dialog-body idt-scrollbar">
+      <div class="packs-list"></div>
+    </div>
+
+    <div class="dialog-footer">
+      <button class="idt-btn-cancel btn-dialog-cancel">Cancel</button>
+      <button class="idt-btn-ok btn-dialog-ok">Ok</button>
+    </div>
+  </dialog>
+
+  <!-- Item in dialog with select icon packs -->
+  <template id="card-icon-pack-template">
+    <div class="card-icon-pack">
+      <input type="checkbox" class="card-icon-pack-checkbox">
+      <div class="card-icon-pack-body">
+        <div class="card-icon-pack-body-1">
+          <div class="card-icon-pack-body-1-left">
+            <span class="card-icon-pack-name"></span>
+            <span class="card-icon-pack-version"></span>
+          </div>
+          <div class="card-icon-pack-source"></div>
+        </div>
+        <div class="card-icon-pack-body-2">
+          <div class="card-icon-pack-body-2-left">
+            <div class="card-icon-pack-prefix"></div>
+            <div class="card-icon-pack-qty"></div>
+          </div>
+          <div class="card-icon-pack-license"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div class="projects-sidebar">
+    <div class="projects-header">
+      <span class="projects-title">My icons</span>
+      <button class="btn-flat btn-projects-close"><i class="mdi-close"></i></button>
+    </div>
+    <div class="projects-body idt-scrollbar">
+      </div>
+  </div>
+
+  <template id="project-item-template">
+    <div class="project-item">
+      <div class="project-info">
+        <div class="project-name"></div>
+        <div class="project-prefix"></div>
+      </div>
+      <div class="project-count">
+        <div class="project-count-available"></div>
+        <div class="project-count-total"></div>
+      </div>
+    </div>
+  </template>
+
+  <dialog class="alert-dialog idt-dialog">
+    <div class="alert-dialog-body">
+      <div class="alert-dialog-text"></div>
+    </div>
+    <div class="alert-dialog-footer">
+      <button class="idt-btn-ok alert-dialog-close">Ok</button>
+    </div>
+  </dialog>
+
+  <dialog class="scan-dialog idt-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title">Scan project</div>
+    </div>
+    <div class="dialog-body idt-scrollbar" style="height: auto; padding: 16px 24px;">
+      <div class="dialog-search-container" style="margin-top: 0;">
+        <div class="search-field">
+          <input type="text" class="search-field-input scan-path-input" placeholder="e.g. D:/project/quasar-app" style="padding: 8px 12px;">
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="idt-btn-cancel btn-scan-cancel">Cancel</button>
+      <button class="idt-btn-ok btn-scan-submit" disabled>Scan</button>
+    </div>
+  </dialog>
+
+  <template id="search-field-template">
+    <div class="search-field">
+      <i class="mdi-magnify-outline search-field-icon"></i>
+      <input type="text" class="search-field-input">
+      <i class="mdi-close search-field-clear"></i>
+    </div>
+  </template>
+
+  <div id="toast-wrapper">
+    <div id="toast" class="toast">Icon name copied to clipboard!</div>
+  </div>
+
+</body>
+</html>

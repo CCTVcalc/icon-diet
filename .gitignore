@@ -1,0 +1,5 @@
+node_modules/
+packages/core/ext-icon
+packages/core/out
+docs/
+icon-diet/

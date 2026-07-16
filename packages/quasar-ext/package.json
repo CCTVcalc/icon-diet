@@ -1,0 +1,12 @@
+{
+  "name": "quasar-app-extension-icon-diet",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": false,
+  "description": "Quasar App Extension to optimize and diet your icon packs",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  }
+}

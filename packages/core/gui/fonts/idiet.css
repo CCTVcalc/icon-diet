@@ -1,0 +1,25 @@
+@font-face {
+  font-family: 'idiet';
+  src: url('./idiet.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="mdi-"], [class^="material-symbols-"], [class^="ic-"] {
+  font-family: 'idiet' !important;
+  font-style: normal;
+  font-weight: normal;
+  display: inline-block;
+  line-height: 1;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ic-outline-content-copy::before { content: "\e000"; }
+.material-symbols-scan-outline-rounded::before { content: "\e001"; }
+.material-symbols-upload-2-outline-rounded::before { content: "\e002"; }
+.mdi-close::before { content: "\e003"; }
+.mdi-cog-outline::before { content: "\e004"; }
+.mdi-filter-outline::before { content: "\e005"; }
+.mdi-folder-outline::before { content: "\e006"; }
+.mdi-magnify-outline::before { content: "\e007"; }
