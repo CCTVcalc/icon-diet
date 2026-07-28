@@ -14,7 +14,7 @@ export default function (api) {
   const backendEnv = {
     ...process.env,
     IS_EXTENSION: 'true',
-    EXT_ICON_SET: 'material-icons',
+    EXT_ICON_SET: null,
     PROJECT_ROOT: process.cwd()
   }
 
@@ -30,7 +30,7 @@ export default function (api) {
   
   api.extendQuasarConf(async (conf) => {
     quasarConf = conf
-    
+
     const appPacks = [
       'material-icons',
       'material-icons-outlined',
@@ -45,9 +45,7 @@ export default function (api) {
     
     const activeViolations = conf.extras?.filter(item => appPacks.includes(item)) || []
 
-    backendEnv.EXT_ICON_SET = conf.framework?.iconSet && appPacks.includes(conf.framework.iconSet)
-      ? conf.framework.iconSet 
-      : 'material-icons'
+    backendEnv.EXT_ICON_SET = conf.framework?.iconSet || 'material-icons'
 
     const hasBoot = conf.boot && conf.boot.some(b => 
       typeof b === 'string' ? b.includes('idiet-boot') : b.path?.includes('idiet-boot')
@@ -62,11 +60,10 @@ export default function (api) {
     const hasCustomMapFn = conf.framework?.iconMapFn !== undefined
 
     if (activeViolations.length > 0 || hasCustomMapFn) {
-      console.error('\n\n🚨 [icon diet] CRITICAL WARNING!')
+      console.error('\n\n🚨 [icon diet] WARNING!')
       
       if (activeViolations.length > 0) {
         console.error(`You have included standard fonts in 'extras': [${activeViolations.join(', ')}].`)
-        console.error('This breaks Icon Diet optimization and bloats the bundle!')
         console.error('SOLUTION: Comment out or remove them from the "extras" section in "quasar.config.js/.ts".')
       }
       
@@ -76,9 +73,6 @@ export default function (api) {
         console.error('SOLUTION: Remove the "framework.iconMapFn" property from your Quasar configuration.')
         console.error('If you need custom rules, edit the "src/idiet/idietIconMapFn.js" file instead.')
       }
-      
-      console.error('--------------------------------------------------\n\n')
-      process.exit(1)
     }
 
     conf.boot.push('~/src/idiet/idiet-boot.js')
@@ -91,78 +85,44 @@ export default function (api) {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const guiPort = basePort + attempt
-      
+
       const child = fork(binPath, [], {
-        env: backendEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-        detached: true
+        env: { ...backendEnv, PORT: guiPort },
+        stdio: ['inherit', 'inherit', 'inherit', 'ipc']
       })
 
-      const isStarted = await new Promise((resolve) => {
-        const timer = setTimeout(() => {
-          child.kill()
-          resolve(false)
-        }, 3000)
-
+      const isReady = await new Promise((resolve) => {
         child.on('message', function listener(msg) {
           if (msg && msg.status === 'ready') {
-            clearTimeout(timer)
             child.off('message', listener)
             resolve(true)
           }
         })
 
-        child.once('exit', () => {
-          clearTimeout(timer)
-          resolve(false)
-        })
+        child.once('exit', () => resolve(false))
       })
 
-      if (isStarted) {
-        console.log(`\n🚀 [icon-diet] Web GUI is successfully running at: http://localhost:${guiPort}\n`)
+      if (isReady) {
+        console.log(`\n🚀 [icon-diet] Web GUI is successfully running at: http://localhost:${guiPort}`)
+        console.log(`💡 Press Ctrl+C to stop the Web GUI.\n`)
 
         const extIconFolder = path.join(idietFolder, 'ext-icon')
-        if (!fs.existsSync(extIconFolder)) {
-          fs.mkdirSync(extIconFolder, { recursive: true })
+        if (!fs.existsSync(extIconFolder)) fs.mkdirSync(extIconFolder, { recursive: true })
+
+        const cleanup = () => {
+          if (!child.killed) child.kill()
+          process.exit()
         }
 
-        fs.writeFileSync(path.join(idietFolder, '.gui.pid'), String(child.pid))
-        child.unref()
-        process.exit(0)
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+
+        return new Promise(() => {})
       }
 
       console.log(`⚠️ [icon-diet] Port ${guiPort} is busy. Trying next one...`)
     }
-
     console.error('❌ [icon-diet] Could not find an available port for Web GUI.')
-  })
-
-  api.registerCommand('stop', async () => {
-    const pidFile = path.join(idietFolder, '.gui.pid')
-
-    if (!fs.existsSync(pidFile)) {
-      console.log('ℹ️ [icon-diet] Web GUI is not running (or already stopped).')
-      return
-    }
-
-    try {
-      const pid = parseInt(fs.readFileSync(pidFile, 'utf8'), 10)
-
-      if (pid) {
-        process.kill(pid, 'SIGTERM')
-        console.log(`🛑 [icon-diet] Web GUI (PID: ${pid}) has been stopped.`)
-      }
-    } catch (err) {
-      if (err.code === 'ESRCH') {
-        console.log('ℹ️ [icon-diet] Web GUI was already stopped.')
-      } else {
-        console.error('❌ [icon-diet] Failed to stop Web GUI:', err.message)
-      }
-    } finally {
-      try {
-        fs.unlinkSync(pidFile)
-      } catch {}
-    }
   })
 
   api.registerCommand('scan', async () => {
@@ -179,64 +139,48 @@ export default function (api) {
 
   api.registerCommand('add-icon', async () => {
     const rawIcons = getCleanCliIcons()
+    
     console.log('[icon-diet] Detected incoming icons:', rawIcons)
-
+    console.log('💡 fa- icons must use the fa-truncated_prefix$name format (e.g., fa-fas$user, fa-fab$aws).')
     if (rawIcons.length === 0) {
-      console.log('❌ [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close, bi-alarm mdi-home')
+      console.log('❌ [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close bi-alarm mdi-home')
       return
     }
 
-    const uniqueIcons = [...new Set(rawIcons)]
-    const candidates = uniqueIcons.filter(icon => !icon.startsWith('fa-'))
-    const skippedFa = uniqueIcons.filter(icon => icon.startsWith('fa-'))
+    const candidates = [...new Set(rawIcons)]
 
     if (candidates.length === 0) {
-      console.log('⚠️ [icon-diet] No suitable candidates found for validation (FontAwesome icons skipped).')
-      if (skippedFa.length > 0) console.log(`Skipped (FontAwesome): ${skippedFa.join(', ')}`)
+      console.log('⚠️ No suitable candidates found for validation.')
       return
     }
 
     let backend
     try {
       backend = await executeBackendCommand(backendEnv)
-      console.log(`🔍 [icon-diet] Checking candidates (${candidates.length} pcs)...`)
+      console.log(`🔍 Checking candidates (${candidates.length} pcs)...`)
       
-      const checkResult = await makeRequest({
+      const { approved, rejected, iconsToGenerate } = await makeRequest({
         ...POST_DEFAULT_OPTIONS,
         port: backend.port,
-        path: '/api/check-icon'
+        path: '/api/check-icons'
       }, {
         iconNames: candidates
       })
 
-      const approved = []
-      const rejected = []
-      const newIconsToGenerate = []
-
-      for (const [iconName, data] of Object.entries(checkResult?.icons || {})) {
-        if (data) {
-          approved.push(iconName)
-          newIconsToGenerate.push(data)
-        } else {
-          rejected.push(iconName)
-        }
-      }
-
       console.log('\n=== CHECK RESULTS ===')
-      if (approved.length > 0) console.log(`\n✅ VALID CANDIDATES (${approved.length}):\n${approved.map(i => `  - ${i}`).join('\n')}`)
-      if (rejected.length > 0) console.log(`\n❌ INVALID CANDIDATES (${rejected.length}):\n${rejected.map(i => `  - ${i}`).join('\n')}`)
-      if (skippedFa.length > 0) console.log(`\n⚠️ IGNORED (FontAwesome) (${skippedFa.length}):\n${skippedFa.map(i => `  - ${i}`).join('\n')}`)
-      console.log('\n========================')
+      if (approved.length > 0) console.log(`\n✅ VALID (${approved.length}):\n${approved.map(i => `  - ${i}`).join('\n')}`)
+      if (rejected.length > 0) console.log(`\n❌ INVALID (${rejected.length}):\n${rejected.map(i => `  - ${i}`).join('\n')}`)
+      console.log('\n=====================')
 
-      if (newIconsToGenerate.length === 0) {
-        console.log('\n⚠️ [icon-diet] Generation skipped because no valid icons were found.')
+      if (iconsToGenerate.length === 0) {
+        console.log('\n⚠️ Generation skipped because no valid icons were found.')
         return
       }
 
-      await mergeAndGenerateIcons(backend.port, newIconsToGenerate)
+      await mergeAndGenerateIcons(backend.port, iconsToGenerate)
 
     } catch (e) {
-      console.log('❌ [icon-diet] Icon processing error:', e.message || e)
+      console.log('❌ Icon addition processing error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -296,7 +240,7 @@ export default function (api) {
 
       console.log('\n🔤 [icon-diet] Available fonts:')
       
-      ;['@quasar/extras', '@iconify'].forEach(source => {
+      ;['@quasar/extras', 'iconify'].forEach(source => {
         console.log(`\n from ${source}:`)
         packs
           ?.filter(p => p.source === source)
@@ -342,6 +286,7 @@ export default function (api) {
 
   api.registerCommand('rebuildDB', async () => {
     let backend
+    console.log('[icon-diet] Updating database...')
 
     try {
       backend = await executeBackendCommand(backendEnv)
@@ -351,14 +296,14 @@ export default function (api) {
         port: backend.port,
         path: '/api/update-packages'
       })
-      console.log('✅ [icon-diet] Icon packages updated successfully.')
+      console.log('✅ Icon packages updated successfully.')
 
       await makeRequest({
         ...POST_DEFAULT_OPTIONS,
         port: backend.port,
         path: '/api/rebuild-database'
       })
-      console.log('✅ [icon-diet] Database rebuilt successfully.')
+      console.log('✅ Database rebuilt successfully.')
 
     } catch (e) {
       console.log('❌ [icon-diet] Process error:', e.message || e)
@@ -372,13 +317,12 @@ export default function (api) {
 
 Common commands:
   start                 Run web-server with GUI
-  stop                  Stop web-server with GUI
   scan                  Scan project and add found icons to web-font
   add-icon              Add icons without GUI (accepts multiple names with prefix, e.g., mdi-close. Excludes fa- icons)
   show-fonts            List of fonts used in your project
   show-fonts-available  Lists available fonts
   show-icons            Display icon names used in your project
-  rebuildDB             Update source (@quasar/extras and @iconify) and rebuild DB
+  rebuildDB             Update source (@quasar/extras and iconify) and rebuild DB
   help                  Show this help
 
 Notes:
@@ -388,7 +332,7 @@ Notes:
 `)
   })
 
-  async function doScan(backendPort, isInit = false) {
+  async function doScan (backendPort, isInit = false) {
     console.log(isInit 
         ? '📦 [icon-diet] First run detected. Running initial project scan...' 
         : '🔍 [icon-diet] Scanning project files...'
@@ -403,7 +347,7 @@ Notes:
     const discoveredIcons = scanResult?.icons || []
 
     if (discoveredIcons.length === 0) {
-      console.log('⚠️ [icon-diet] No icons found during the scan.')
+      console.log('⚠️ No icons found during the scan.')
       return
     }
 
@@ -419,21 +363,33 @@ Notes:
       })
 
       const currentIcons = projectDetails?.icons || []
-      
-      const uniqueIconsMap = new Map()
-      currentIcons.forEach(icon => uniqueIconsMap.set(`${icon.prefix}:${icon.name}`, icon))
-      
-      discoveredIcons.forEach(icon => {
-        const key = `${icon.prefix}:${icon.name}`
-        if (!uniqueIconsMap.has(key)) {
-          uniqueIconsMap.set(key, icon)
+
+      const getIconName = (item) => {
+        if (typeof item === 'string') return item
+        return item?.fullName || item?.name || null
+      }
+
+      const uniqueIconsSet = new Set()
+
+      currentIcons.forEach(item => {
+        const name = getIconName(item)
+        if (name) uniqueIconsSet.add(name)
+      })
+
+      let newlyAddedCount = 0
+
+      discoveredIcons.forEach(item => {
+        const name = getIconName(item)
+        if (name && !uniqueIconsSet.has(name)) {
+          uniqueIconsSet.add(name)
+          newlyAddedCount++
         }
       })
 
-      finalIconsBatch = Array.from(uniqueIconsMap.values())
+      finalIconsBatch = Array.from(uniqueIconsSet)
     }
 
-    console.log(`📦 [icon-diet] Generating web-font for ${finalIconsBatch.length} total icons...`)
+    console.log(`📦 Generating web-font for ${finalIconsBatch.length} total icons...`)
     
     await makeRequest({
       ...POST_DEFAULT_OPTIONS,
@@ -443,49 +399,51 @@ Notes:
       icons: finalIconsBatch
     })
 
-    console.log(
-      isInit 
-        ? '✅ [icon-diet] Initial scan completed. Assets generated in "src/idiet/".' 
-        : '✅ [icon-diet] Web-font assets updated successfully!'
+    console.log( isInit 
+        ? '✅ Initial scan completed. Assets generated in "src/idiet/".' 
+        : '✅ Web-font assets updated successfully!'
     )
   }
 
   async function mergeAndGenerateIcons (backendPort, newIcons) {
-    console.log('\n🔄 [icon-diet] Fetching current project icons to prevent overwriting...')
-    
     const projectDetails = await makeRequest({
       ...POST_DEFAULT_OPTIONS,
       port: backendPort,
       path: '/api/project-details'
     })
-
+    
     const currentIcons = projectDetails?.icons || []
     
-    const uniqueIconsMap = new Map()
-    currentIcons.forEach(icon => uniqueIconsMap.set(`${icon.prefix}:${icon.name}`, icon))
+    const getName = (item) => typeof item === 'string' ? item : item?.fullName || item?.name
+
+    const uniqueIconsSet = new Set()
+    currentIcons.forEach(icon => {
+      const name = getName(icon)
+      if (name) uniqueIconsSet.add(name)
+    })
     
     let newlyAddedCount = 0
     newIcons.forEach(icon => {
-      const key = `${icon.prefix}:${icon.name}`
-      if (!uniqueIconsMap.has(key)) {
-        uniqueIconsMap.set(key, icon)
+      const name = getName(icon)
+      if (name && !uniqueIconsSet.has(name)) {
+        uniqueIconsSet.add(name)
         newlyAddedCount++
       }
     })
 
-    const finalIconsBatch = Array.from(uniqueIconsMap.values())
+    const finalIconsBatch = Array.from(uniqueIconsSet)
 
-    console.log(`📦 [icon-diet] Generating web-font for ${finalIconsBatch.length} total icons (${currentIcons.length} existing + ${newlyAddedCount} new)...`)
+    console.log(`📦 [icon-diet] Generating web-font for ${finalIconsBatch.length} total icons (${uniqueIconsSet.size - newlyAddedCount} existing + ${newlyAddedCount} new)...`)
     
     await makeRequest({
-       ...POST_DEFAULT_OPTIONS,
+      ...POST_DEFAULT_OPTIONS,
       port: backendPort,
       path: '/api/generate'
     }, {
       icons: finalIconsBatch
     })
 
-    console.log('✅ [icon-diet] Web-font assets updated successfully!')
+    console.log('✅ Web-font assets updated successfully!')
   }
 
   function getCleanCliIcons () {

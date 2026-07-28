@@ -10,24 +10,6 @@ export const api = {
     return response.json()
   },
 
-  async getIcon (prefixOrArray, name) {
-    const isBatch = Array.isArray(prefixOrArray)
-    const payload = isBatch 
-      ? prefixOrArray 
-      : (name ? { prefix: prefixOrArray, name } : prefixOrArray)
-
-    const response = await fetch('/api/icon', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-    
-    const result = await response.json()
-    return isBatch ? result : result[0]
-  },
-
   async uploadIcons (files) {
     const formData = new FormData()
     for (const file of files) {
@@ -103,6 +85,17 @@ export const api = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ projectPath })
+    })
+    return response.json()
+  },
+
+  async setIconSet (iconSet) {
+    const response = await fetch('/api/set-iconset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ iconSet })
     })
     return response.json()
   }

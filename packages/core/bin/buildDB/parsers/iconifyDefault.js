@@ -73,7 +73,6 @@ export function getIcons (pack, packJSON, packMetaJSON) {
 
       result[name] = {
         body,
-        separator: '-',
         search: Array.from(searchTerms)
       }
     }

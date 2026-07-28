@@ -1,4 +1,27 @@
+import fs from 'node:fs'
+
 export default function (api) {
+  const indexPath = api.resolve.app('index.html')
+
+  if (fs.existsSync(indexPath)) {
+    let html = fs.readFileSync(indexPath, 'utf-8')
+
+    if (html.includes('Content-Security-Policy')) {
+      if (/font-src/i.test(html)) {
+        html = html.replace(/(font-src\s+[^"';]+)/i, (match) => {
+          return match.includes('data:') ? match : `${match} data:`
+        })
+      } else {
+        html = html.replace(
+          /(http-equiv="Content-Security-Policy"[^>]*content="[^"]*)/i,
+          "$1; font-src 'self' data:"
+        )
+      }
+      
+      fs.writeFileSync(indexPath, html, 'utf-8')
+    }
+  }
+
   api.onExitLog(`
 ======================================================================
   🎉 Quasar App Extension Icon Diet successfully installed!

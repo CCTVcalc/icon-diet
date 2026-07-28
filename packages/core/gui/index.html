@@ -38,6 +38,7 @@
           <summary class="accordion-header base-icons-title-wrapper">
             <div class="base-icons-title">
               Built-in Quasar icons
+              (<span class="base-icons-qty"></span>)
             </div>
           </summary>
           <div class="accordion-content">
@@ -60,11 +61,26 @@
           <div class="main-search-container"></div>
           <button class="btn-flat btn-filter"><i class="mdi-filter-outline btn-icon-only"></i></button>
         </div>
+        
+        <div class="idt-select-field">
+          <label class="idt-select-label">Base icon pack</label>
+          <div class="idt-dropdown">
+            <button type="button" class="idt-dropdown-trigger" id="idt-set-trigger">Select pack</button>
+            <div class="idt-dropdown-menu idt-scrollbar" id="idt-set-menu">
+            </div>
+          </div>
+          <select id="idt-set-select" style="display: none;"></select>
+        </div>
+
+        <div class="idt-set-field">
+          <div class="idt-set-label">Base icon pack</div>
+          <div id="idt-set-info"></div>
+        </div>
 
         <div class="toolbar-actions">
-          <button class="btn-flat btn-scan"><i class="material-symbols-scan-outline-rounded btn-icon"></i>Scan project</button>
-          <button class="btn-flat btn-upload"><i class="material-symbols-upload-2-outline-rounded btn-icon"></i>Upload icons</button>
-          <button class="btn-flat btn-my-icons"><i class="mdi-folder-outline btn-icon"></i>My icons</button>
+          <button class="btn-flat btn-scan"><i class="material-symbols-scan-outline-rounded btn-icon"></i><span class="btn-flat-label">Scan project</span></button>
+          <button class="btn-flat btn-upload"><i class="material-symbols-upload-2-outline-rounded btn-icon"></i><span class="btn-flat-label">Upload icons</span></button>
+          <button class="btn-flat btn-my-icons"><i class="mdi-folder-outline btn-icon"></i><span class="btn-flat-label">My icons</span></button>
         </div>
 
         <input type="file" id="icon-file-input" multiple accept=".svg" style="display: none;">
@@ -76,23 +92,31 @@
     </main>
   </div>
 
+  <!-- dropdown menu item -->
+  <template id="menu-item-template">
+    <div class="idt-dropdown-item">
+      <span class="name"></span>
+      <span class="prefix"></span>
+    </div>
+  </template>
+
   <!-- icon block for left panel -->
   <template id="card-icon-out-item-template">
-    <div class="card-icon-out-item">
-      <div class="card-icon-out-placeholder"></div>
-      <div class="card-icon-out-info">
-        <div class="card-icon-out-fullname">
-          <div class="card-icon-out-name-prefix-wrapper">
-            <div class="card-icon-out-name-prefix-extra"></div>
-            <div class="card-icon-out-name-prefix"></div>
-            <div class="card-icon-out-name-separator"></div>
+    <div class="card-icon-out item">
+      <div class="placeholder"></div>
+      <div class="info">
+        <div class="fullname">
+          <div class="name-prefix-wrapper">
+            <div class="name-prefix-extra"></div>
+            <div class="name-prefix"></div>
+            <div class="name-separator"></div>
           </div>
-          <div class="card-icon-out-name-wrapper">
-            <div class="card-icon-out-name"></div>
-            <i class="ic-outline-content-copy card-icon-btn-copy-name"></i>
+          <div class="name-wrapper">
+            <div class="name"></div>
+            <i class="ic-outline-content-copy btn-copy-name"></i>
           </div>
         </div>
-        <div class="card-icon-out-name-helper"></div>
+        <div class="name-helper"></div>
       </div>
       <span class="remove-btn">
         <i class="mdi-close"></i>
@@ -102,20 +126,19 @@
 
   <!-- icon block for right panel in grid container -->
   <template id="card-icon-item-template">
-    <div class="card-icon-item">
-      <div class="card-icon-placeholder"></div>
-      <div class="card-icon-info">
-        <div class="card-icon-fullname">
-          <div class="card-icon-name-prefix-wrapper">
-            <div class="card-icon-name-prefix-extra"></div>
-            <div class="card-icon-name-prefix"></div>
-            <div class="card-icon-name-separator"></div>
+    <div class="card-icon item">
+      <div class="placeholder"></div>
+      <div class="info">
+        <div class="fullname">
+          <div class="name-prefix-wrapper">
+            <div class="name-prefix-extra"></div>
+            <div class="name-prefix"></div>
           </div>
-          <div class="card-icon-name-wrapper">
-            <div class="card-icon-name"></div>
-            <i class="ic-outline-content-copy card-icon-btn-copy-name"></i>
+          <div class="name-wrapper">
+            <div class="name"></div>
+            <i class="ic-outline-content-copy btn-copy-name"></i>
           </div>
-          <span class="card-icon-name"></span>
+          <span class="name"></span>
         </div>
       </div>
     </div>
@@ -140,22 +163,22 @@
 
   <!-- Item in dialog with select icon packs -->
   <template id="card-icon-pack-template">
-    <div class="card-icon-pack">
-      <input type="checkbox" class="card-icon-pack-checkbox">
-      <div class="card-icon-pack-body">
-        <div class="card-icon-pack-body-1">
-          <div class="card-icon-pack-body-1-left">
-            <span class="card-icon-pack-name"></span>
-            <span class="card-icon-pack-version"></span>
+    <div class="pack">
+      <input type="checkbox" class="pack-checkbox">
+      <div class="pack-body">
+        <div class="pack-body-1">
+          <div class="pack-body-1-left">
+            <span class="pack-name"></span>
+            <span class="pack-version"></span>
           </div>
-          <div class="card-icon-pack-source"></div>
+          <div class="pack-source"></div>
         </div>
-        <div class="card-icon-pack-body-2">
-          <div class="card-icon-pack-body-2-left">
-            <div class="card-icon-pack-prefix"></div>
-            <div class="card-icon-pack-qty"></div>
+        <div class="pack-body-2">
+          <div class="pack-body-2-left">
+            <div class="pack-prefix"></div>
+            <div class="pack-qty"></div>
           </div>
-          <div class="card-icon-pack-license"></div>
+          <div class="pack-license"></div>
         </div>
       </div>
     </div>
@@ -166,8 +189,7 @@
       <span class="projects-title">My icons</span>
       <button class="btn-flat btn-projects-close"><i class="mdi-close"></i></button>
     </div>
-    <div class="projects-body idt-scrollbar">
-      </div>
+    <div class="projects-body idt-scrollbar"></div>
   </div>
 
   <template id="project-item-template">
@@ -177,8 +199,22 @@
         <div class="project-prefix"></div>
       </div>
       <div class="project-count">
-        <div class="project-count-available"></div>
-        <div class="project-count-total"></div>
+        <span class="project-count-available-wrapper">
+          <span class="project-count-available"></span>
+          &nbsp;icon(s)
+        </span>
+        
+        <span class="project-count-base-wrapper">
+          +
+          <span class="project-count-base"></span>
+          &nbsp;base
+        </span>
+
+        <span class="project-count-missing-wrapper">
+          -
+          <span class="project-count-missing"></span>
+          &nbsp;missing
+        </span>
       </div>
     </div>
   </template>
@@ -206,6 +242,12 @@
     <div class="dialog-footer">
       <button class="idt-btn-cancel btn-scan-cancel">Cancel</button>
       <button class="idt-btn-ok btn-scan-submit" disabled>Scan</button>
+    </div>
+  </dialog>
+
+  <dialog class="scanning-dialog">
+    <div class="scanning-text">
+      Scanning...
     </div>
   </dialog>
 

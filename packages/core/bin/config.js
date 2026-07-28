@@ -3,7 +3,8 @@ const config = {
   PACKS: {
     quasar: {
       'material-icons': {
-        title: "Material Icons by Google",
+        title: 'Material Icons',
+        author: 'Google',
         size: 24,
         color: '#2196F3',
         dir: 'material-icons',
@@ -14,7 +15,8 @@ const config = {
         parser: 'mat.js'
       },
       'material-icons-outlined': {
-        title: "Material Icons Outlined by Google",
+        title: 'Material Icons Outlined',
+        author: 'Google',
         size: 24,
         color: '#1976D2',
         dir: 'material-icons-outlined',
@@ -24,7 +26,8 @@ const config = {
         iconifyMap: 'ic'
       },
       'material-icons-round': {
-        title: "Material Icons Rounded by Google",
+        title: 'Material Icons Rounded',
+        author: 'Google',
         size: 24,
         color: '#0D47A1',
         dir: 'material-icons-round',
@@ -34,7 +37,8 @@ const config = {
         iconifyMap: 'ic'
       },
       'material-icons-sharp': {
-        title: "Material Icons Sharp by Google",
+        title: 'Material Icons Sharp',
+        author: 'Google',
         size: 24,
         color: '#1565C0',
         dir: 'material-icons-sharp',
@@ -45,7 +49,8 @@ const config = {
       },
       
       'material-symbols-outlined': {
-        title: "Material Symbols Outlined by Google",
+        title: 'Material Symbols Outlined',
+        author: 'Google',
         size: 960,
         color: '#4285F4',
         dir: 'material-symbols-outlined',
@@ -56,7 +61,8 @@ const config = {
         parser: 'sym.js'
       },
       'material-symbols-rounded': {
-        title: "Material Symbols Rounded by Google",
+        title: 'Material Symbols Rounded',
+        author: 'Google',
         size: 960,
         color: '#34A853',
         dir: 'material-symbols-rounded',
@@ -67,7 +73,8 @@ const config = {
         parser: 'sym.js'
       },
       'material-symbols-sharp': {
-        title: "Material Symbols Sharp by Google",
+        title: 'Material Symbols Sharp',
+        author: 'Google',
         size: 960,
         color: '#FBBC05',
         dir: 'material-symbols-sharp',
@@ -79,7 +86,8 @@ const config = {
       },
       
       'mdi-v7': {
-        title: "Material Design Icons (MDI) by Pictogrammers",
+        title: 'Material Design Icons',
+        author: 'Pictogrammers',
         size: 24,
         color: '#2196F3',
         dir: 'mdi-v7',
@@ -90,23 +98,55 @@ const config = {
       },
 
       'fontawesome-v7': {
-        title: "Font Awesome by Fonticons",
+        title: 'Font Awesome',
+        author: 'Fonticons',
         size: 512,
         color: '#FF3D00',
         dir: 'fontawesome-v7',
         separator: '-',
         prefix: 'fa',
-        cutPrefix: '',//['fas', 'fab', 'far'],
+        cutPrefix: '', // manual cut
         iconifyMap: 'fa-solid',
         parser: 'fa.js'
       }
     },
     iconify: {
-      'carbon': { title: 'Carbon Design System Icons by IBM', size: 32, color: '#0F62FE',  },
-      'heroicons-solid': { title: 'Heroicons Solid by Tailwind Labs', size: 24, color: '#34D399' },
-      'octicon': { title: 'Octicons by GitHub', size: 16, color: '#4ADE80', parser: 'octicon.js' }, // not include 12x12 and 24x24 icons
-      'pixelarticons': { title: 'Pixelarticons by Gerrit Halfmann', size: 24, color: '#A7F3D0' },
-      'ri': { title: 'Remix Icon by CoCo', size: 24, color: '#FF4A6B' }
+      'carbon': {
+        title: 'Carbon Design System Icons',
+        author: 'IBM',
+        size: 32,
+        color: '#0F62FE',
+        prefix: 'carbon'
+      },
+      'heroicons-solid': {
+        title: 'Heroicons Solid',
+        author: 'Tailwind Labs',
+        size: 24,
+        color: '#34D399',
+        prefix: 'heroicons-solid'
+      },
+      'octicon': {
+        title: 'Octicons',
+        author: 'GitHub',
+        size: 16, // not include 12x12 and 24x24 icons
+        color: '#4ADE80',
+        parser: 'octicon.js',
+        prefix: 'octicon'
+      }, 
+      'pixelarticons': {
+        title: 'Pixelarticons',
+        author: 'Gerrit Halfmann',
+        size: 24,
+        color: '#A7F3D0',
+        prefix: 'pixelarticons'
+      },
+      'ri': {
+        title: 'Remix Icon',
+        author: 'CoCo',
+        size: 24,
+        color: '#FF4A6B',
+        prefix: 'ri'
+      }
     }
   },
   DYNAMIC_START_UNICODE: 0xe150,
@@ -122,13 +162,23 @@ const config = {
 
   BASE_PACK: {
     // If app installed as extension in boot-file read iconSet params from quasar.config.js/.ts ignore BASE_PACK.iconSet.  
-    iconSet: 'mdi-v7', // 'fontawesome-v7', // 'material-icons', // default value
+    iconSet: 'material-icons', // default value
     color: '#1976D2'
-  }
+  },
+
+  SUPPORT_ICON_SET: [
+    'material-icons',
+    'material-icons-outlined',
+    'material-icons-round',
+    'material-icons-sharp',
+    'material-symbols-outlined',
+    'material-symbols-rounded',
+    'material-symbols-sharp',
+    'mdi-v7',
+    'fontawesome-v7'
+  ]
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { config }
-}
+if (typeof module !== 'undefined' && module.exports) module.exports = { config }
 
 export { config }

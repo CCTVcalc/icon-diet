@@ -1,12 +1,20 @@
 import { api } from './api.js'
-import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs/+esm'
+import Sortable from './assets/sortable.js'
 
 document.addEventListener('DOMContentLoaded', async () => {
   const dom = {
     leftPanelList: document.querySelector('.left-panel-list'),
     baseList: document.querySelector('.base-icons-list'),
+    baseIconsQty: document.querySelector('.base-icons-qty'),
     gridContainer: document.querySelector('.grid-container'),
     mainContent: document.querySelector('.main-content'),
+    setSelector: document.querySelector('.idt-select-field'),
+    dropdown: document.querySelector('.idt-dropdown'),
+    dropdownTrigger: document.getElementById('idt-set-trigger'),
+    dropdownMenu: document.getElementById('idt-set-menu'),
+    setField: document.querySelector('.idt-set-field'),
+    menuItemTemplate: document.getElementById('menu-item-template'),
+    iconSetInfo: document.getElementById('idt-set-info'),
     btnGenerate: document.querySelector('.btn-generate'),
     btnFilter: document.querySelector('.btn-filter'),
     btnOptions: document.querySelector('.btn-options'),
@@ -34,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     scanPathInput: document.querySelector('.scan-path-input'),
     btnScanCancel: document.querySelector('.btn-scan-cancel'),
     btnScanSubmit: document.querySelector('.btn-scan-submit'),
+    scanningDialog: document.querySelector('.scanning-dialog'),
 
     alertDialog: document.querySelector('.alert-dialog'),
     alertDialogText: document.querySelector('.alert-dialog-text'),
@@ -44,27 +53,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     toast: document.getElementById('toast')
   }
   
-  const USER_ICON_PACK = 'ext'
   const LIMIT = 100
   let currentStart = 0
   let currentQuery = ''
   let hasMore = true
   let isLoading = false
-  
   let loadedIcons = []
-  let selectedIcons = new Map()
-  const baseIcons = await api.getBaseIcons()
-  
-  let allPacks = [] 
+    
+  let allPacks = await api.getPacks()
+  let baseIcons = await api.getBaseIcons()
+
   let selectedPacks = new Set()
+  let selectedIcons = new Map()
   let searchTimeout
 
-  const baseIconsNames = baseIcons.map(i => i.name)
+  const getBaseIconsNames = () => baseIcons.map(i => i.name)
   function checkIconIsBase (icon) {
     if (!icon) return false
-    if (icon.prefix === baseIcons[0].prefix && baseIconsNames.includes(icon.name)) return true
+    return icon?.prefix === baseIcons[0]?.prefix && getBaseIconsNames().includes(icon.name)
   }
-  
+    
   function showAlert (message) {
     dom.alertDialogText.textContent = message
     dom.alertDialog.showModal()
@@ -88,9 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     inputEl.placeholder = placeholderText
 
-    const updateState = () => {
-      fieldEl.classList.toggle('is-empty', inputEl.value.trim() === '')
-    }
+    const updateState = () => fieldEl.classList.toggle('is-empty', inputEl.value.trim() === '')
 
     updateState()
 
@@ -133,9 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dialogSearchComponent = createSearchField(
     document.querySelector('.dialog-search-container'),
     'Search packs...',
-    value => {
-      renderDialogPacks(value.trim())
-    }
+    value => renderDialogPacks(value.trim())
   )
 
   if (dom.checkboxSelectAll && dom.checkboxSelectAll.tagName !== 'INPUT') {
@@ -163,26 +167,132 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   })
 
-  let isExt = false
+  function prefixOut (icon) {
+    const prefix = icon.prefix
+    const s = icon.separator
+    if (prefix === 'mat') return ''
+    if (prefix.startsWith('mat')) return prefix.slice('mat_'.length) + s
+    return prefix + s
+  }
+
+  let IS_EXT = false
+  let ICON_SETS = null
+  let USER_ICON_PACK = ''
+  
+  let ICON_SET = null
+
+  async function syncIconSet (newSet) {
+    ICON_SET = newSet
+    updateSetSelector(newSet)
+    baseIcons = await api.getBaseIcons()
+    renderBaseList()
+    renderGrid(loadedIcons)
+  }
+
+  async function setIconSet (newSet) {
+    if (ICON_SET === newSet) return
+    if (!IS_EXT) await api.setIconSet(newSet)
+    await syncIconSet(newSet)
+  }
+
+  function updateSetSelector (newSet) {
+    const pack = allPacks.find(e => e.key === newSet)
+    const packName = pack?.name || newSet
+
+    if (IS_EXT) {
+      if (dom.iconSetInfo) dom.iconSetInfo.textContent = packName
+    } else {
+      if (dom.dropdownTrigger) dom.dropdownTrigger.textContent = packName
+      if (dom.dropdownMenu) {
+        dom.dropdownMenu.querySelectorAll('.idt-dropdown-item').forEach(item => {
+          item.classList.toggle('is-selected', item.dataset.value === newSet)
+        })
+      }
+    }
+  }
+
+  let config
   try {
-    const config = await api.getConfig()
-    isExt = !!config.isExt
+    config = await api.getConfig()
+    IS_EXT = !!config.isExt
+    if (!IS_EXT) ICON_SETS = config.iconSets
+    USER_ICON_PACK = config.userIconPackName || 'ext'
+
+    await syncIconSet(config.iconSet)
   } catch (err) {
     console.error('[icon-diet] Failed to fetch config:', err.message)
   }
 
-  if (isExt) {
-    if (dom.btnMyIcons) {
-      dom.btnMyIcons.style.display = 'none'
+  async function runScan (projectPath) {
+    dom.btnScan.disabled = true
+    dom.scanningDialog.showModal()
+
+    try {
+      const result = await api.scanFiles(projectPath || undefined)
+
+      if (result.error) {
+        showAlert(result.error)
+        return
+      }
+
+      if (result && Array.isArray(result.icons) && result.icons.length > 0) {
+        result.icons.forEach(icon => selectedIcons.set(icon.fullName, icon))
+
+        renderSelectedList()
+
+        if (result) await syncIconSet(result.iconSet ?? config.defaultIconSet)
+        
+        /* Block for standalone app only */
+        let alertIconSet = ''
+        if (result.iconSetStatus === 'fail')
+          alertIconSet = `WARNING! Could not parse iconSet from quasar.config.js /.ts! \n Using default: ${config.defaultIconSet}\n\n`
+
+        showAlert(`Automated project scan complete. \n\n ${alertIconSet} Found and added ${result.icons.length} icons.\n\nPlease note: Icons constructed dynamically via string concatenation might have been skipped. Please verify the selected icon list manually.`)
+      } else {
+        showAlert('No matching icons found during scanning.')
+      }
+    } catch (err) {
+      console.error(err)
+      showAlert('An error occurred during project scanning. Please verify the backend logs.')
+    } finally {
+      dom.btnScan.disabled = false
+      dom.scanningDialog.close()
     }
+  }
+
+  async function handleGenerate (onSuccess) {
+    if (selectedIcons.size === 0) return
+
+    dom.btnGenerate.disabled = true
+    dom.btnGenerate.textContent = 'Generating...'
+
+    try {
+      const result = await api.generateBundle([...selectedIcons.values()].map(el => el.fullName))
+
+      if (result.success) await onSuccess(result)
+      else showAlert(`Error: ${result.error}`)
+
+    } catch (error) {
+      console.error('Generation request failed:', error)
+      showAlert('Failed to generate font bundle.')
+    } finally {
+      dom.btnGenerate.disabled = false
+      const count = selectedIcons.size
+      dom.btnGenerate.textContent = 'Generate font ' + (count !== 0 ? `(${count})` : '')
+    }
+  }
+  
+  if (IS_EXT) {
+    /* APP IS QUASAR EXTENSION */
+    dom.setSelector.style.display = 'none'
+    dom.btnMyIcons.style.display = 'none'
 
     try {
       const current = await api.getCurrentIcons()
       if (current && current.icons && current.icons.length > 0) {
         current.icons.forEach(icon => {
-          const iconKey = `${icon.prefix}:${icon.name}`
-          if (!selectedIcons.has(iconKey)) {
-            selectedIcons.set(iconKey, icon)
+          if (!selectedIcons.has(icon.fullName)) {
+            selectedIcons.set(icon.fullName, icon)
           }
         })
         renderSelectedList()
@@ -191,66 +301,72 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('[icon-diet] Failed to load current icons:', err.message)
     }
 
-    dom.btnScan.addEventListener('click', async () => {
-      dom.btnScan.disabled = true
-      const originalText = dom.btnScan.innerHTML
-      dom.btnScan.textContent = 'Scanning...'
-
-      try {
-        const result = await api.scanFiles()
-        if (result.error) {
-          showAlert(result.error)
-          return
-        }
-
-        if (result && Array.isArray(result.icons) && result.icons.length > 0) {
-          result.icons.forEach(icon => {
-            const iconKey = `${icon.prefix}:${icon.name}`
-            selectedIcons.set(iconKey, icon)
-          })
-          
-          renderSelectedList()
-          renderGrid(loadedIcons)
-          
-          showAlert(`Automated project scan complete. Found and added ${result.icons.length} icons.\n\nPlease note: Icons constructed dynamically via string concatenation might have been skipped. Please verify the selected icon list manually.`)
-        } else {
-          showAlert('No matching icons found during scanning.')
-        }
-      } catch (err) {
-        console.error(err)
-        showAlert('An error occurred during project scanning. Please verify the backend logs.')
-      } finally {
-        dom.btnScan.disabled = false
-        dom.btnScan.innerHTML = originalText
-      }
-    })
-
-    dom.btnGenerate.addEventListener('click', async () => {
-      if (selectedIcons.size === 0) return
-
-      dom.btnGenerate.disabled = true
-      dom.btnGenerate.textContent = 'Generating...'
-
-      try {
-        const iconsArray = Array.from(selectedIcons.values())
-        const result = await api.generateBundle(iconsArray)
-        
-        if (result.success) {
-          showAlert('Font and styles successfully generated and integrated into your Quasar project!')
-        } else {
-          showAlert(`Error: ${result.error}`)
-        }
-      } catch (error) {
-        console.error('Generation request failed:', error)
-        showAlert('Failed to generate font bundle.')
-      } finally {
-        dom.btnGenerate.disabled = false
-        const count = selectedIcons.size
-        dom.btnGenerate.textContent = 'Generate font ' + (count !== 0 ? `(${count})` : '')
-      }
-    })
-
+    dom.btnScan.addEventListener('click', async () => await runScan())
+    dom.btnGenerate.addEventListener('click', () => handleGenerate(
+      () => showAlert('Font and styles successfully generated and integrated into your project!')
+    ))
   } else {
+    /* STAND ALONE APP */
+   if (ICON_SETS) {
+      dom.setField.style.display = 'none'
+      
+      if (dom.dropdownMenu) dom.dropdownMenu.innerHTML = ''
+
+      ICON_SETS.forEach(i => {
+        const pack = allPacks.find(e => e.key === i)
+        const packName = pack?.name || i
+        const prefixName = pack?.id
+        const separator = pack?.separator
+        const prefixColor = pack?.color
+        
+        const clone = dom.menuItemTemplate.content.cloneNode(true)
+        const item = clone.querySelector('.idt-dropdown-item')
+
+        item.dataset.value = i
+        const name = item.querySelector('.name')
+        const prefix = item.querySelector('.prefix')
+        
+        if (name) name.textContent = packName
+        if (prefix) prefix.textContent = prefixName.startsWith('mat') 
+          ? prefixName === 'mat'
+            ? '<mat>'
+            : `<mat_>${prefixName.slice('mat_'.length)}${separator}` 
+          : `${prefixName}${separator}`
+          
+        if (prefix && prefixColor) prefix.style.color = prefixColor
+        
+        item.addEventListener('click', (e) => {
+          e.stopPropagation()
+          if (dom.dropdown) dom.dropdown.classList.remove('is-active')
+          setIconSet(i)
+        })
+
+        if (dom.dropdownMenu) dom.dropdownMenu.appendChild(item)
+      })
+
+      if (ICON_SET) updateSetSelector(ICON_SET)
+
+      if (dom.dropdownTrigger && dom.dropdown) {
+        dom.dropdownTrigger.addEventListener('click', (e) => {
+          e.stopPropagation()
+          dom.dropdown.classList.toggle('is-active')
+          
+          if (dom.dropdown.classList.contains('is-active') && dom.dropdownMenu) {
+            const selectedItem = dom.dropdownMenu.querySelector('.idt-dropdown-item.is-selected')
+            if (selectedItem) {
+              selectedItem.scrollIntoView({ block: 'nearest' })
+            }
+          }
+        })
+      }
+
+      document.addEventListener('click', (e) => {
+        if (dom.dropdown && !dom.dropdown.contains(e.target)) {
+          dom.dropdown.classList.remove('is-active')
+        }
+      })
+    }
+
     if (dom.btnMyIcons) {
       dom.btnMyIcons.addEventListener('click', async (e) => {
         e.stopPropagation()
@@ -274,17 +390,25 @@ document.addEventListener('DOMContentLoaded', async () => {
               const name = clone.querySelector('.project-name')
               const prefix = clone.querySelector('.project-prefix')
               const countAvailable = clone.querySelector('.project-count-available')
-              const countTotal = clone.querySelector('.project-count-total')
+              const countBase = clone.querySelector('.project-count-base')
+              const countMissing = clone.querySelector('.project-count-missing')
+              const countMissingWrapper = clone.querySelector('.project-count-missing-wrapper')
               
               name.textContent = projName
-              prefix.textContent = proj.packs?.join(', ')
+              prefix.textContent = proj.packs
+                ?.map(p => 
+                  p.startsWith('mat')
+                    ? p === 'mat' ? '<mat>' : `<mat_>${p.slice('mat_'.length)}`
+                    : p
+                )
+                .join(', ')
 
-              countAvailable.textContent = proj.count - proj.unavailableCount
+              const countBaseIcons = baseIcons.length || 0
+              countAvailable.textContent = proj.count
 
-              if (proj.unavailableCount !== 0) {
-                countAvailable.classList.add('is-warning')
-                countTotal.textContent = '/' + proj.count
-              }
+              countBase.textContent = countBaseIcons
+              if (proj.unavailableCount === 0) countMissingWrapper.style.display = 'none'
+              countMissing.textContent = proj.unavailableCount
               
               itemContainer.addEventListener('click', () => loadSavedProject(projName))
               dom.sidebarBody.appendChild(clone)
@@ -310,14 +434,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.sidebar.classList.remove('is-open')
       }
     })
-
-    async function loadSavedProject(folderName) {
+    
+    async function loadSavedProject (folderName) {
       try {
         const data = await api.getProjectDetails(folderName)
         
         if (data.error) throw new Error(data.error)
         
-        const { icons = [], notFoundIcons = [] } = data
+        const { icons = [], notFoundIcons = [], iconSet } = data
 
         if (!icons.length) {
           showAlert('The icons used are no longer supported in the application.')
@@ -325,14 +449,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         selectedIcons.clear()
-        for (const icon of icons) {
-          const iconKey = `${icon.prefix}:${icon.name}`
-          selectedIcons.set(iconKey, icon)
-        }
 
+        for (const icon of icons) selectedIcons.set(icon.fullName, icon)
+
+        if (iconSet) await syncIconSet(iconSet)
         renderSelectedList()
-        renderGrid(loadedIcons)
-        
+          
         if (dom.sidebar) dom.sidebar.classList.remove('is-open')
 
         if (notFoundIcons.length > 0) {
@@ -365,69 +487,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       dom.scanDialog.close()
-      dom.btnScan.disabled = true
-      const originalText = dom.btnScan.innerHTML
-      dom.btnScan.textContent = 'Scanning...'
-
-      try {
-        const result = await api.scanFiles(projectPath)
-        
-        if (result.error) {
-          showAlert(result.error)
-          return
-        }
-
-        if (result && Array.isArray(result.icons) && result.icons.length > 0) {
-          result.icons.forEach(icon => {
-            const iconKey = `${icon.prefix}:${icon.name}`
-            selectedIcons.set(iconKey, icon)
-          })
-          
-          renderSelectedList()
-          renderGrid(loadedIcons)
-          
-          showAlert(`Automated project scan complete. Found and added ${result.icons.length} icons.\n\nPlease note: Icons constructed dynamically via string concatenation might have been skipped. Please verify the selected icon list manually.`)
-        } else {
-          showAlert('No matching icons found during scanning.')
-        }
-      } catch (err) {
-        console.error(err)
-        showAlert('An error occurred during project scanning. Please verify the backend logs.')
-      } finally {
-        dom.btnScan.disabled = false
-        dom.btnScan.innerHTML = originalText
-      }
+      runScan(projectPath)
     })
 
-    dom.btnGenerate.addEventListener('click', async () => {
-      if (selectedIcons.size === 0) return
-
-      dom.btnGenerate.disabled = true
-      dom.btnGenerate.textContent = 'Generating...'
-
-      try {
-        const iconsArray = Array.from(selectedIcons.values())
-        const result = await api.generateBundle(iconsArray)
-        
-        if (result.success && result.folder) {
-          const zipUrl = `/out/${result.folder}/idiet.zip`
+    dom.btnGenerate.addEventListener('click', () => {
+      handleGenerate((result) => {
+        if (result.folder) {
           const link = document.createElement('a')
-          link.href = zipUrl
+          link.href = `/out/${result.folder}/idiet.zip`
           link.download = `icons-${result.folder}.zip`
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
-        } else {
-          showAlert(`Error: ${result.error}`)
         }
-      } catch (error) {
-        console.error('Generation request failed:', error)
-        showAlert('Failed to generate font bundle.')
-      } finally {
-        dom.btnGenerate.disabled = false
-        const count = selectedIcons.size
-        dom.btnGenerate.textContent = 'Generate font ' + (count !== 0 ? `(${count})` : '')
-      }
+      })
     })
   }
 
@@ -462,24 +535,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function initFilterDialog() {
     try {
-      const fetchPacksMethod = api.getPacks || api.getCollections || api.getIconsPacks
-      if (typeof fetchPacksMethod === 'function') {
-        allPacks = await fetchPacksMethod.call(api)
-      } else {
-        allPacks = []
-      }
-      
-      const hasUserExtIcon = allPacks.some(pack => pack.id === USER_ICON_PACK)
-      if (!hasUserExtIcon) {
-        allPacks.push({
-          id: USER_ICON_PACK,
-          name: 'User extension icons',
-          count: 0,
-          license: 'Local',
-          color: '#0f9d58'
-        })
-      }
-
       allPacks.forEach(pack => selectedPacks.add(pack.id))
       updateMasterCheckboxState()
       updateFilterButtonState()
@@ -532,14 +587,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     filtered.forEach(pack => {
       const clone = dom.packTemplate.content.cloneNode(true)
-      const container = clone.querySelector('.card-icon-pack')
-      const checkbox = clone.querySelector('.card-icon-pack-checkbox')
-      const nameDiv = clone.querySelector('.card-icon-pack-name')
-      const countDiv = clone.querySelector('.card-icon-pack-qty')
-      const prefixDiv = clone.querySelector('.card-icon-pack-prefix')
-      const licenseDiv = clone.querySelector('.card-icon-pack-license')
-      const versionDiv = clone.querySelector('.card-icon-pack-version')
-      const sourceDiv = clone.querySelector('.card-icon-pack-source')
+      const container = clone.querySelector('.pack')
+      const checkbox = clone.querySelector('.pack-checkbox')
+      const nameDiv = clone.querySelector('.pack-name')
+      const countDiv = clone.querySelector('.pack-qty')
+      const prefixDiv = clone.querySelector('.pack-prefix')
+      const licenseDiv = clone.querySelector('.pack-license')
+      const versionDiv = clone.querySelector('.pack-version')
+      const sourceDiv = clone.querySelector('.pack-source')
 
       checkbox.checked = selectedPacks.has(pack.id)
       
@@ -559,12 +614,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       })
 
-      nameDiv.textContent = pack.name || pack.id
-      if (countDiv) {
-        countDiv.textContent = pack.count || 0
-      }
+      nameDiv.textContent = `${pack.name}${pack.author ? (' - ' + pack.author) : ''}` || pack.id
+      if (countDiv) countDiv.textContent = pack.count || 0
+
       if (prefixDiv) {
-        prefixDiv.textContent = pack.id
+       prefixDiv.textContent = pack.id.startsWith('mat') 
+          ? pack.id === 'mat'
+            ? '<mat>'
+            : `<mat_>${pack.id.slice('mat_'.length)}${pack.separator}` 
+          : `${pack.id}${pack.separator}`
+
         if (pack.color) prefixDiv.style.color = pack.color
       }
       if (licenseDiv && pack.license) licenseDiv.textContent = pack.license
@@ -604,23 +663,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadGridIcons(false)
   })
 
-  function renderGrid(iconsToRender) {
+  function renderGrid (iconsToRender) {
     dom.gridContainer.innerHTML = ''
 
     iconsToRender.forEach(icon => {
       const clone = dom.iconTemplate.content.cloneNode(true)
-      const item = clone.querySelector('.card-icon-item')
-      const iconGlif = clone.querySelector('.card-icon-placeholder')
-      const prefixWrapper = clone.querySelector('.card-icon-name-prefix-wrapper')
-      const prefixExtra = clone.querySelector('.card-icon-name-prefix-extra')
-      const prefix = clone.querySelector('.card-icon-name-prefix')
-      const separator = clone.querySelector('.card-icon-name-separator')
-      const name = clone.querySelector('.card-icon-name')
-      const copyBtn = clone.querySelector('.card-icon-btn-copy-name')
+      const item = clone.querySelector('.item')
+      const iconGlif = clone.querySelector('.placeholder')
+      const prefixWrapper = clone.querySelector('.name-prefix-wrapper')
+      const prefixExtra = clone.querySelector('.name-prefix-extra')
+      const prefix = clone.querySelector('.name-prefix')
+      const name = clone.querySelector('.name')
+      const copyBtn = clone.querySelector('.btn-copy-name')
 
-      const iconKey = `${icon.prefix}:${icon.name}`
-      const width = icon.width || 32
-      const height = icon.height || 32
+      const width = icon.size || 32
+      const height = icon.size || 32
       
       let extraClass = null
       let iconDisplayName = icon.name
@@ -630,7 +687,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         extraClass = { fas: 'fa-solid', far: 'fa-regular', fab: 'fa-brands' }[style]
       }  
       
-      const iconFullName = (extraClass ?? ' ') + `${icon.prefix}${icon.separator}${iconDisplayName}`
+      const iconFullName = 
+        (extraClass ? (extraClass + ' ') : '') + prefixOut(icon) + iconDisplayName
       item.setAttribute('data-tooltip', iconFullName)
 
       iconGlif.innerHTML = 
@@ -641,14 +699,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       prefixExtra.textContent = extraClass ?? ''
       prefixExtra.style['padding-right'] = extraClass ? '8px' : 'none'
-      prefix.textContent = icon.prefix
-      separator.textContent = icon.separator
+      prefix.textContent = prefixOut(icon) ?? ''
       name.textContent = iconDisplayName
 
-      if (selectedIcons.has(iconKey)) {
-        item.classList.add('active')
-      }
-
+      if (selectedIcons.has(icon.fullName)) item.classList.add('active')
+      
       if (!checkIconIsBase(icon)) 
         item.addEventListener('click', () => toggleIconSelection(icon, item))
       else
@@ -660,63 +715,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  function renderSelectedList() {
-    dom.leftPanelList.innerHTML = ''
+  function renderLeftPanelItem (icon, type) {
+    const clone = dom.iconOutTemplate.content.cloneNode(true)
+    const item = clone.querySelector('.item')
+    const iconGlif = clone.querySelector('.placeholder')
+    const prefixWrapper = clone.querySelector('.name-prefix-wrapper')
+    const prefixExtra = clone.querySelector('.name-prefix-extra')
+    const prefix = clone.querySelector('.name-prefix')
+    const separator = clone.querySelector('.name-separator')
+    const name = clone.querySelector('.name')
+    const helperDiv = clone.querySelector('.helper')
+    const copyBtn = clone.querySelector('.btn-copy-name')
+    const removeBtn = clone.querySelector('.remove-btn')
 
-    selectedIcons.forEach(icon => {
-      const clone = dom.iconOutTemplate.content.cloneNode(true)
-      const item = clone.querySelector('.card-icon-out-item')
-      const iconGlif = clone.querySelector('.card-icon-out-placeholder')
-      const prefixWrapper = clone.querySelector('.card-icon-out-name-prefix-wrapper')
-      const prefixExtra = clone.querySelector('.card-icon-out-name-prefix-extra')
-      const prefix = clone.querySelector('.card-icon-out-name-prefix')
-      const separator = clone.querySelector('.card-icon-out-name-separator')
-      const name = clone.querySelector('.card-icon-out-name')
-      const helperDiv = clone.querySelector('.card-icon-out-name-helper')
-      const copyBtn = clone.querySelector('.card-icon-btn-copy-name')
-      const removeBtn = clone.querySelector('.remove-btn')
+    const width = icon.size || 24
+    const height = icon.size || 24
 
-      const iconKey = `${icon.prefix}:${icon.name}`
-      const width = icon.width || 24
-      const height = icon.height || 24
-
-      let extraClass = null
-      let iconDisplayName = icon.name
-      if (icon.prefix === 'fa') {
-        const [style, name] = icon.name.split('$')
-        iconDisplayName = name
-        extraClass = { fas: 'fa-solid', far: 'fa-regular', fab: 'fa-brands' }[style]
-      }  
+    let extraClass = null
+    let iconDisplayName = icon.name
+    if (icon.prefix === 'fa') {
+      const [style, name] = icon.name.split('$')
+      iconDisplayName = name
+      extraClass = { fas: 'fa-solid', far: 'fa-regular', fab: 'fa-brands' }[style]
+    }  
       
-      const iconFullName = (extraClass ?? ' ') + `${icon.prefix}${icon.separator}${iconDisplayName}`
-      item.setAttribute('data-tooltip', iconFullName)
-      
-      iconGlif.innerHTML = 
-        `<svg width="32" height="32" viewBox="0 0 ${width} ${height}" fill="none">
-          ${icon.body}
-        </svg>`
-      if (prefixWrapper && icon.color) prefixWrapper.style.color = icon.color
+    const iconFullName =
+      (extraClass ? (extraClass + ' ') : '') + prefixOut(icon) + iconDisplayName
+    
+    iconGlif.innerHTML = 
+      `<svg width="24" height="24" viewBox="0 0 ${width} ${height}" fill="none">
+        ${icon.body}
+      </svg>`
+    if (prefixWrapper && icon.color) prefixWrapper.style.color = icon.color
 
-      prefixExtra.textContent = extraClass ?? ''
-      prefixExtra.style['padding-right'] = extraClass ? '8px' : 'none'
-      prefix.textContent = icon.prefix
-      separator.textContent = icon.separator
-      name.textContent = iconDisplayName
+    prefixExtra.textContent = extraClass ?? ''
+    prefixExtra.style['padding-right'] = extraClass ? '8px' : 'none'
+    prefix.textContent = prefixOut(icon) ?? ''
+    name.textContent = iconDisplayName
 
-      if (icon.helper) {
-        helperDiv.textContent = icon.helper
-      } else if (helperDiv) {
-        helperDiv.remove()
-      }
+    if (icon.helper) helperDiv.textContent = icon.helper
+    else if (helperDiv) helperDiv.remove()
 
+    copyBtn.addEventListener('click', (e) => copyIconNameToClipboard(e, iconFullName))
+    
+    if (type !== 'base') {
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation()
-        removeIcon(iconKey)
+        removeIcon(icon.fullName)
       })
-
-      copyBtn.addEventListener('click', (e) => copyIconNameToClipboard(e, iconFullName))
       dom.leftPanelList.appendChild(clone)
-    })
+    } else {
+      removeBtn.style.display = 'none'
+      dom.baseList.appendChild(clone)
+    }
+  }
+  
+  function renderSelectedList() {
+    dom.leftPanelList.innerHTML = ''
+    selectedIcons.forEach(icon => renderLeftPanelItem (icon))
 
     const count = selectedIcons.size
     dom.btnGenerate.textContent = 'Generate font '  + (count !== 0 ? `(${count})` : '')
@@ -726,45 +782,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderBaseList() {
-    baseIcons.forEach(icon => {
-      const clone = dom.iconOutTemplate.content.cloneNode(true)
-      const iconGlif = clone.querySelector('.card-icon-out-placeholder')
-      const prefixWrapper = clone.querySelector('.card-icon-out-name-prefix-wrapper')
-      const prefixExtra = clone.querySelector('.card-icon-out-name-prefix-extra')
-      const prefix = clone.querySelector('.card-icon-out-name-prefix')
-      const separator = clone.querySelector('.card-icon-out-name-separator')
-      const name = clone.querySelector('.card-icon-out-name')
-      const helperDiv = clone.querySelector('.card-icon-out-name-helper')
-      const copyBtn = clone.querySelector('.card-icon-btn-copy-name')
-      const removeBtn = clone.querySelector('.remove-btn')
-
-      const width = icon.width || 24
-      const height = icon.height || 24
-
-      const iconFullName = (icon.extraClass ? (icon.extraClass + ' ') : '') + `${icon.prefix}${icon.separator}${icon.name}`
-      
-      iconGlif.innerHTML = 
-        `<svg width="32" height="32" viewBox="0 0 ${width} ${height}" fill="none">
-          ${icon.body}
-        </svg>`
-      if (prefixWrapper && icon.color) prefixWrapper.style.color = icon.color
-
-      prefixExtra.textContent = icon.extraClass ?? ''
-      prefixExtra.style['padding-right'] = icon.extraClass ? '8px' : 'none'
-      prefix.textContent = icon.prefix
-      separator.textContent = icon.separator
-      name.textContent = icon.name
-
-      if (icon.helper) {
-        helperDiv.textContent = icon.helper
-      } else if (helperDiv) {
-        helperDiv.remove()
-      }
-
-      removeBtn.style.display = 'none'
-      copyBtn.addEventListener('click', (e) => copyIconNameToClipboard(e, iconFullName))
-      dom.baseList.appendChild(clone)
-    })
+    dom.baseList.innerHTML = ''
+    dom.baseIconsQty.textContent = baseIcons.length
+    baseIcons.forEach(icon => renderLeftPanelItem (icon, 'base'))
   }
 
   function copyIconNameToClipboard (evt, icon) {
@@ -778,18 +798,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function toggleIconSelection(icon, itemDiv) {
-    const iconKey = `${icon.prefix}:${icon.name}`
-
-    if (selectedIcons.has(iconKey)) {
-      selectedIcons.delete(iconKey)
+    if (selectedIcons.has(icon.fullName)) {
+      selectedIcons.delete(icon.fullName)
       itemDiv.classList.remove('active')
     } else {
       const newMap = new Map()
-      newMap.set(iconKey, icon)
+      newMap.set(icon.fullName, icon)
       
-      for (const [key, value] of selectedIcons) {
-        newMap.set(key, value)
-      }
+      for (const [key, value] of selectedIcons) newMap.set(key, value)
       
       selectedIcons = newMap
       itemDiv.classList.add('active')
@@ -798,15 +814,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSelectedList()
   }
 
-  function removeIcon(iconKey) {
+  function removeIcon (iconKey) {
     selectedIcons.delete(iconKey)
     renderSelectedList()
+    renderGrid(loadedIcons)
     
-    const gridItems = dom.gridContainer.querySelectorAll('.card-icon-item')
+    const gridItems = dom.gridContainer.querySelectorAll('.item')
     gridItems.forEach(item => {
-      const prefix = item.querySelector('.card-icon-name-prefix')?.textContent.replace(':', '') || ''
-      const name = item.querySelector('.card-icon-name').textContent
-      if (`${prefix}:${name}` === iconKey) {
+      const prefix = item.querySelector('.name-prefix')?.textContent.replace(':', '') || ''
+      const name = item.querySelector('.name').textContent
+      if (item.fullName === iconKey) {
         item.classList.remove('active')
       }
     })

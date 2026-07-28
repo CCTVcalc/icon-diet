@@ -1,6 +1,6 @@
 {
   "name": "@icon-diet/core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "@vue/compiler-sfc": "^3.4.0",
-    "acorn": "^8.11.0",
-    "acorn-walk": "^8.3.0",
+    "strip-comments": "^2.0.1",
     "htmlparser2": "^9.1.0",
     "@quasar/extras": "^2.0.1",
     "@iconify-json/bi": "^1.2.0",

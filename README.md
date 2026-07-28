@@ -1,6 +1,6 @@
 # Intro
-**Icon Diet** - forces your heavy icon fonts to lose weight. In Quasar projects, unused icon packs can sometimes end up weighing more than your entire application logic combined.
-Result achieved on a live project: instead of 1.6 MB of fonts and 500 KB of companion CSS files — I get just 30 KB in a single CSS file!
+**Icon Diet** for Quasar v2 - forces your heavy icon fonts to lose weight. In Quasar projects, unused icon packs can sometimes end up weighing more than your entire application logic combined. Result achieved on a live project: instead of 1.6 MB of fonts and 500 KB of companion CSS files — I get just 30 KB in a single CSS file!
+
 Ready?
 
 # How It Works (No Magic)
@@ -47,9 +47,13 @@ Q: Which icon packs are supported?
 
 A: Supported out of the box are **Material Icons**, **Material Symbols**, **MDI v7**, and **Font Awesome v7**. Additionally, other packs can be used, although they cannot be configured as the default system-wide Quasar icon set (via `iconSet`): **Carbon Design System Icons**, **Heroicons Solid**, **Octicons**, **Pixelarticons**, and **Remix Icon**. Custom SVG icon uploads are also supported.
 
+Q: What is the `<mat>` prefix for Material Icons?
+
+A: Quasar uses no prefix for base Material Icons and short prefixes like `o_` for styles (e.g., `Outlined`). Internally and in output CSS classes, this app uses normalized prefixes such as `mat`, `mat_o`, etc., to identify Material Icon packs correctly.
+
 Q: Why does the code look... well, a bit "unique"?
 
-A: Hey, it seems to work! I’m a self-taught developer with exactly zero days of commercial coding experience. The entire project was built with assistance from AI (free Google Gemini). If this tool actually becomes popular, I fully expect (and hope) the code will eventually be rewritten by pros. Pull requests, code reviews, and architectural suggestions are highly welcome! 
+A: Hey, it seems to work! I’m a self-taught frontend-developer with exactly zero days of commercial coding experience. The entire project was built with assistance from AI (free Google Gemini). If this tool actually becomes popular, I fully expect (and hope) the code will eventually be rewritten by pros. Pull requests, code reviews, and architectural suggestions are highly welcome! 
 
 # License
 This project is licensed under the [MIT License](LICENSE).

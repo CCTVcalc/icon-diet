@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { config } from '../config.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -19,7 +19,7 @@ if (fs.existsSync(quasarPkgPath)) quasarPkg = fs.readFileSync(quasarPkgPath, 'ut
 let plainConfig = {}
 
 for (const key of Object.keys(config.PACKS.iconify)) {
-  plainConfig[key] = { source: 'iconify', prefix: key, ...config.PACKS.iconify[key] }
+  plainConfig[key] = { source: 'iconify', separator: '-', ...config.PACKS.iconify[key] }
 }
 
 for (const key of Object.keys(config.PACKS.quasar)) {
@@ -67,7 +67,10 @@ export async function buildDatabase (force = false) {
 
     if (pack.source === '@quasar/extras') {
       const filePath = path.join(QUASAR_EXTRAS_DIR, pack.dir, 'index.js')
-      if (fs.existsSync(filePath)) packJSON = fs.readFileSync(filePath, 'utf8')
+      if (fs.existsSync(filePath)) {
+        const fileUrl = pathToFileURL(filePath).href
+        packJSON = await import(fileUrl)
+      }
 
       const metaPath = path.join(ICONIFY_DIR, pack.iconifyMap, 'icons.json')
       if (fs.existsSync(metaPath)) packMetaJSON = fs.readFileSync(metaPath, 'utf8')
@@ -88,13 +91,15 @@ export async function buildDatabase (force = false) {
     const icons = parser.getIcons(pack, packJSON, packMetaJSON)
 
     db[pack.prefix] = {
+      key,
       title: info.title,
+      author: pack.author,
       version: info.version,
       source: pack.source,
       license: info.license,
       color: pack.color,
       size: pack.size,
-      separator: pack.separator || '-',
+      separator: pack.separator,
       icons: icons,
       count: Object.keys(icons).length
     }
