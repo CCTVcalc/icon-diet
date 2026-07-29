@@ -368,31 +368,9 @@ Notes:
         path: '/api/project-details',
       })
 
-      const currentIcons = projectDetails?.icons || []
-
-      const getIconName = (item) => {
-        if (typeof item === 'string') return item
-        return item?.fullName || item?.name || null
-      }
-
-      const uniqueIconsSet = new Set()
-
-      currentIcons.forEach(item => {
-        const name = getIconName(item)
-        if (name) uniqueIconsSet.add(name)
-      })
-
-      let newlyAddedCount = 0
-
-      discoveredIcons.forEach(item => {
-        const name = getIconName(item)
-        if (name && !uniqueIconsSet.has(name)) {
-          uniqueIconsSet.add(name)
-          newlyAddedCount++
-        }
-      })
-
-      finalIconsBatch = Array.from(uniqueIconsSet)
+      const currentIcons = projectDetails?.icons.map(i => i.fullName) || []
+      
+      finalIconsBatch = Array.from(new Set([...currentIcons, ...discoveredIcons]))
     }
 
     console.log(`📦 Generating web-font for ${finalIconsBatch.length} total icons...`)
@@ -411,36 +389,29 @@ Notes:
     )
   }
 
-  async function mergeAndGenerateIcons (backendPort, newIcons) {
+  async function mergeAndGenerateIcons (backendPort, newIcons = []) {
     const projectDetails = await makeRequest({
       ...POST_DEFAULT_OPTIONS,
       port: backendPort,
       path: '/api/project-details'
     })
-    
-    const currentIcons = projectDetails?.icons || []
-    
-    const getName = (item) => typeof item === 'string' ? item : item?.fullName || item?.name
 
-    const uniqueIconsSet = new Set()
-    currentIcons.forEach(icon => {
-      const name = getName(icon)
-      if (name) uniqueIconsSet.add(name)
-    })
-    
-    let newlyAddedCount = 0
-    newIcons.forEach(icon => {
-      const name = getName(icon)
-      if (name && !uniqueIconsSet.has(name)) {
-        uniqueIconsSet.add(name)
-        newlyAddedCount++
-      }
-    })
+    const currentIcons = projectDetails?.icons?.map(i => i.fullName) || []
 
-    const finalIconsBatch = Array.from(uniqueIconsSet)
+    const currentSet = new Set(currentIcons)
 
-    console.log(`📦 [icon-diet] Generating web-font for ${finalIconsBatch.length} total icons (${uniqueIconsSet.size - newlyAddedCount} existing + ${newlyAddedCount} new)...`)
-    
+    const newlyAddedIcons = newIcons.filter(icon => !currentSet.has(icon))
+    const newlyAddedCount = newlyAddedIcons.length
+
+    if (newlyAddedCount === 0 && currentIcons.length > 0) {
+      console.log('📦 [icon-diet] No new icons detected. Skipping generation.')
+      return
+    }
+
+    const finalIconsBatch = [...currentIcons, ...newlyAddedIcons]
+
+    console.log(`📦 [icon-diet] Generating web-font for ${finalIconsBatch.length} total icons (${currentIcons.length} existing + ${newlyAddedCount} new)...`)
+
     await makeRequest({
       ...POST_DEFAULT_OPTIONS,
       port: backendPort,
