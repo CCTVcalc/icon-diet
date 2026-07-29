@@ -49,11 +49,10 @@ export default function (api) {
 
     backendEnv.EXT_ICON_SET = conf.framework?.iconSet || 'material-icons'
 
-    const hasBoot = conf.boot && conf.boot.some(b => 
-      typeof b === 'string' ? b.includes('idiet-boot') : b.path?.includes('idiet-boot')
-    )
+    const bootFilePath = path.join(api.appDir, 'src/idiet/idiet-boot.js')
+    const isFirstRun = !fs.existsSync(bootFilePath)
 
-    if (!hasBoot) {
+    if (isFirstRun) {
       const tempBackend = await executeBackendCommand(backendEnv)
       await doScan(tempBackend.port, true)
       tempBackend.kill()
