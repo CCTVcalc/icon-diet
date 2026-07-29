@@ -1,6 +1,6 @@
 {
   "name": "icon-diet-core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -12,6 +12,13 @@
     "start": "node bin/index.js"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
+    "cheerio": "^1.0.0",
+    "fflate": "^0.8.2",
+    "svg2ttf": "^6.0.3",
+    "svgicons2svgfont": "^12.0.0",
+    "svgpath": "^2.6.0",
+    "ttf2woff2": "^5.0.0",
     "@vue/compiler-sfc": "^3.4.0",
     "strip-comments": "^2.0.1",
     "htmlparser2": "^9.1.0",
