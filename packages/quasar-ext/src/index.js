@@ -1,12 +1,14 @@
 import { fork } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { executeBackendCommand, makeRequest } from './utils.js'
 import { parseArgs } from 'node:util'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const require = createRequire(import.meta.url)
 
 export default function (api) {
   const idietFolder = path.join(api.appDir, 'src/idiet')
@@ -79,7 +81,7 @@ export default function (api) {
   })
 
   api.registerCommand('start', async () => {
-    const binPath = path.resolve(__dirname, '../../core/bin/index.js')
+    const binPath = require.resolve('icon-diet-core/bin/index.js')
     const basePort = (quasarConf?.devServer?.port || 9000) + 179
     const MAX_RETRIES = 5
 

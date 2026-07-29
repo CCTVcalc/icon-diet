@@ -1,13 +1,15 @@
 import http from 'http'
 import { fork } from 'node:child_process'
+import { createRequire } from 'module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const GUARD_INT = 5000
+const require = createRequire(import.meta.url)
 
 export async function executeBackendCommand (env) {
-  const binPath = path.resolve(__dirname, '../../core/bin/index.js')
+  const binPath = require.resolve('icon-diet-core/bin/index.js')
   const MAX_RETRIES = 3
 
   console.log(`\n🚀 [icon-diet] Starting background service...`)
