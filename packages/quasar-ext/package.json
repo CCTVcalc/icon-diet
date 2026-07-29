@@ -10,6 +10,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@icon-diet-core": "^0.1.0"
+    "icon-diet-core": "^0.1.0"
   }
 }
