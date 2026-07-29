@@ -1,11 +1,19 @@
 {
   "name": "icon-diet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "private": false,
   "type": "module",
   "workspaces": [
     "packages/*"
+  ],
+  "files": [
+    "packages/**/*",
+    "!**/node_modules/**",
+    "!packages/core/ext-icon",
+    "!packages/core/out",
+    "!packages/core/data",
+    "!docs"
   ],
   "scripts": {
     "start": "npm start --workspace=packages/core"

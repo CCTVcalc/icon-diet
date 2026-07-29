@@ -18,22 +18,18 @@ if (fs.existsSync(quasarPkgPath)) quasarPkg = fs.readFileSync(quasarPkgPath, 'ut
 
 let plainConfig = {}
 
-for (const key of Object.keys(config.PACKS.iconify)) {
+for (const key of Object.keys(config.PACKS.iconify))
   plainConfig[key] = { source: 'iconify', separator: '-', ...config.PACKS.iconify[key] }
-}
 
-for (const key of Object.keys(config.PACKS.quasar)) {
+for (const key of Object.keys(config.PACKS.quasar))
   plainConfig[key] = { source: '@quasar/extras', ...config.PACKS.quasar[key] }
-}
 
 export async function buildDatabase (force = false) {
   if (fs.existsSync(DB_PATH) && !force) return
 
   console.log('Database build started...')
 
-  if (!fs.existsSync(DB_DIR)) {
-    fs.mkdirSync(DB_DIR, { recursive: true })
-  }
+  if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true })
 
   const db = {}
   let quasarDefaultParser = {}
