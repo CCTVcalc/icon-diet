@@ -17,7 +17,7 @@ export default function (api) {
     ...process.env,
     IS_EXTENSION: 'true',
     EXT_ICON_SET: null,
-    PROJECT_ROOT: process.cwd()
+    PROJECT_ROOT: api.appDir
   }
 
   const POST_DEFAULT_OPTIONS = {
@@ -62,7 +62,7 @@ export default function (api) {
     const hasCustomMapFn = conf.framework?.iconMapFn !== undefined
 
     if (activeViolations.length > 0 || hasCustomMapFn) {
-      console.error('\n\n🚨 [icon diet] WARNING!')
+      console.error('\n\n🟡 [icon diet] WARNING!')
       
       if (activeViolations.length > 0) {
         console.error(`You have included standard fonts in 'extras': [${activeViolations.join(', ')}].`)
@@ -89,6 +89,7 @@ export default function (api) {
       const guiPort = basePort + attempt
 
       const child = fork(binPath, [], {
+        cwd: api.appDir,
         env: { ...backendEnv, PORT: guiPort },
         stdio: ['inherit', 'inherit', 'inherit', 'ipc']
       })
@@ -112,7 +113,7 @@ export default function (api) {
         if (!fs.existsSync(extIconFolder)) fs.mkdirSync(extIconFolder, { recursive: true })
 
         const cleanup = () => {
-          if (!child.killed) child.kill()
+          if (!child.killed) child.kill('SIGKILL')
           process.exit()
         }
 
@@ -122,9 +123,12 @@ export default function (api) {
         return new Promise(() => {})
       }
 
-      console.log(`⚠️ [icon-diet] Port ${guiPort} is busy. Trying next one...`)
+      try { child.kill('SIGKILL') } catch (_) {}
+      await new Promise(r => setTimeout(r, 200))
+
+      console.log(`🟡 [icon-diet] Port ${guiPort} is busy. Trying next one...`)
     }
-    console.error('❌ [icon-diet] Could not find an available port for Web GUI.')
+    console.error('🔴 [icon-diet] Could not find an available port for Web GUI.')
   })
 
   api.registerCommand('scan', async () => {
@@ -133,7 +137,7 @@ export default function (api) {
       backend = await executeBackendCommand(backendEnv)
       await doScan(backend.port, false)
     } catch (e) {
-      console.error('❌ [icon-diet] Scan command failed:', e.message)
+      console.error('🔴 [icon-diet] Scan command failed:', e.message)
     } finally {
       if (backend) backend.kill()
     }
@@ -145,14 +149,14 @@ export default function (api) {
     console.log('[icon-diet] Detected incoming icons:', rawIcons)
     console.log('💡 fa- icons must use the fa-truncated_prefix$name format (e.g., fa-fas$user, fa-fab$aws).')
     if (rawIcons.length === 0) {
-      console.log('❌ [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close bi-alarm mdi-home')
+      console.log('🔴 [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close bi-alarm mdi-home')
       return
     }
 
     const candidates = [...new Set(rawIcons)]
 
     if (candidates.length === 0) {
-      console.log('⚠️ No suitable candidates found for validation.')
+      console.log('🟡 No suitable candidates found for validation.')
       return
     }
 
@@ -171,18 +175,18 @@ export default function (api) {
 
       console.log('\n=== CHECK RESULTS ===')
       if (approved.length > 0) console.log(`\n✅ VALID (${approved.length}):\n${approved.map(i => `  - ${i}`).join('\n')}`)
-      if (rejected.length > 0) console.log(`\n❌ INVALID (${rejected.length}):\n${rejected.map(i => `  - ${i}`).join('\n')}`)
+      if (rejected.length > 0) console.log(`\n🔴 INVALID (${rejected.length}):\n${rejected.map(i => `  - ${i}`).join('\n')}`)
       console.log('\n=====================')
 
       if (iconsToGenerate.length === 0) {
-        console.log('\n⚠️ Generation skipped because no valid icons were found.')
+        console.log('\n🟡 Generation skipped because no valid icons were found.')
         return
       }
 
       await mergeAndGenerateIcons(backend.port, iconsToGenerate)
 
     } catch (e) {
-      console.log('❌ Icon addition processing error:', e.message || e)
+      console.log('🔴 Icon addition processing error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -222,7 +226,7 @@ export default function (api) {
       }
 
     } catch (e) {
-      console.log('❌ [icon-diet] Error:', e.message || e)
+      console.log('🔴 [icon-diet] Error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -253,7 +257,7 @@ export default function (api) {
       console.log('')
 
     } catch (e) {
-      console.log('❌ [icon-diet] Error:', e.message || e)
+      console.log('🔴 [icon-diet] Error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -280,7 +284,7 @@ export default function (api) {
       }
 
     } catch (e) {
-      console.log('❌ [icon-diet] Error:', e.message || e)
+      console.log('🔴 [icon-diet] Error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -308,7 +312,7 @@ export default function (api) {
       console.log('✅ Database rebuilt successfully.')
 
     } catch (e) {
-      console.log('❌ [icon-diet] Process error:', e.message || e)
+      console.log('🔴 [icon-diet] Process error:', e.message || e)
     } finally {
       if (backend) backend.kill()
     }
@@ -349,7 +353,7 @@ Notes:
     const discoveredIcons = scanResult?.icons || []
 
     if (discoveredIcons.length === 0) {
-      console.log('⚠️ No icons found during the scan.')
+      console.log('🟡 No icons found during the scan.')
       return
     }
 

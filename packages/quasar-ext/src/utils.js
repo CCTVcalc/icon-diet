@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const GUARD_INT = 5000
+const GUARD_INT = 7000
 const require = createRequire(import.meta.url)
 
 export async function executeBackendCommand (env) {
@@ -18,6 +18,7 @@ export async function executeBackendCommand (env) {
     const port = Math.floor(Math.random() * (10000 - 8000) + 8000)
 
     const backendProcess = fork(binPath, [], {
+      cwd: env.PROJECT_ROOT,
       env: { ...env, PORT: port },
       stdio: ['inherit', 'inherit', 'inherit', 'ipc']
     })
@@ -25,7 +26,6 @@ export async function executeBackendCommand (env) {
     try {
       await new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
-          backendProcess.kill()
           reject(new Error('TIMEOUT'))
         }, GUARD_INT)
 
@@ -45,11 +45,14 @@ export async function executeBackendCommand (env) {
 
       return {
         port,
-        kill: () => { backendProcess.kill() }
+        kill: () => {
+          try { backendProcess.kill('SIGKILL') } catch (_) {}
+        }
       }
 
     } catch (err) {
-      backendProcess.kill()
+      try { backendProcess.kill('SIGKILL') } catch (_) {}
+      await new Promise(resolve => setTimeout(resolve, 300))
 
       if (attempt === MAX_RETRIES) {
         if (err.message === 'TIMEOUT') throw new Error('Background service failed to start (timeout).')
