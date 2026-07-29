@@ -14,7 +14,6 @@
     "busboy": "^1.6.0",
     "cheerio": "^1.0.0",
     "fflate": "^0.8.2",
-    "quasar-app-extension-icon-diet": "^1.0.0",
     "svg2ttf": "^6.0.3",
     "svgicons2svgfont": "^12.0.0",
     "svgpath": "^2.6.0",

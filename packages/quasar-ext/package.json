@@ -8,5 +8,8 @@
   "main": "src/index.js",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@icon-diet/core": "^0.1.0"
   }
 }
