@@ -350,7 +350,7 @@ Notes:
       path: '/api/scan-files'
     })
 
-    const discoveredIcons = scanResult?.icons || []
+    const discoveredIcons = scanResult?.icons.map(i => i.fullName) || []
 
     if (discoveredIcons.length === 0) {
       console.log('🟡 No icons found during the scan.')
