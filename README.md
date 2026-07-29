@@ -31,12 +31,21 @@ quasar run icon-diet start
 Upon the first launch, the app will automatically create an `idiet` folder inside your `src` root, scan the project, compile your optimized icon font, and set up the mapping.
 
 ## Option 2: Standalone Local Utility
-From app directory:
+### Install
 ```bash
-npm install icon-diet
+git clone https://github.com/CCTVcalc/icon-diet
+cd icon-diet
+npm i
 npm start
 ```
 Open the provided link in your browser, build your custom icon set, and download the generated font package. Inside the archive, you will find a `readme.txt` — a step-by-step guide for manual integration into your Quasar project.
+
+### Update
+Inside the `icon-diet` folder:
+```bash
+git pull
+npm i
+```
 
 # FAQ
 Q: There are way more icon packs available in `Iconify` and `@quasar/extras`. Why are they missing here?
