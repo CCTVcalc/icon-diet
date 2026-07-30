@@ -1,8 +1,6 @@
 # Intro
 **Icon Diet** for Quasar v2 - forces your heavy icon fonts to lose weight. In Quasar projects, unused icon packs can sometimes end up weighing more than your entire application logic combined. Result achieved on a live project: instead of 1.6 MB of fonts and 500 KB of companion CSS files — I get just 30 KB in a single CSS file!
 
-Ready?
-
 # How It Works (No Magic)
 The app doesn't require you to rewrite existing components or change syntax like `<q-icon name="..." />` or `icon="..."` (which is usually a huge pain when migrating to raw SVGs). It simply injects a lightweight boot file that hooks up a compact custom web font and overrides the icon mapping logic under the hood.
 
@@ -48,17 +46,30 @@ npm i
 ```
 
 # FAQ
+Q: I'm using raw SVG imports. Why do I need this extension?
+
+A: You probably don't! Manual SVG imports work totally fine in all components, and a slightly bloated DOM never killed anyone.
+
+
 Q: There are way more icon packs available in `Iconify` and `@quasar/extras`. Why are they missing here?
 
 A: Only packs that use **solid fills** (`fill`) are supported. Fonts that are partially or fully drawn with lines (`stroke`) are processed incorrectly by the current compiler stack, which often turns icons into unreadable blobs or solid black squares.
+
 
 Q: Which icon packs are supported?
 
 A: Supported out of the box are **Material Icons**, **Material Symbols**, **MDI v7**, and **Font Awesome v7**. Additionally, other packs can be used, although they cannot be configured as the default system-wide Quasar icon set (via `iconSet`): **Carbon Design System Icons**, **Heroicons Solid**, **Octicons**, **Pixelarticons**, and **Remix Icon**. Custom SVG icon uploads are also supported.
 
+
 Q: What is the `<mat>` prefix for Material Icons?
 
 A: Quasar uses no prefix for base Material Icons and short prefixes like `o_` for styles (e.g., `Outlined`). Internally and in output CSS classes, this app uses normalized prefixes such as `mat`, `mat_o`, etc., to identify Material Icon packs correctly.
+
+
+Q: Why do I see nothing instead of my two icons in one tag?
+
+A: If you list multiple non-prefixed icon names together — like `dsadadas_warning_font_download_today_ssadasd` — you might actually see 4 icons instead. Unfortunately, this app does not officially support such advanced features.
+
 
 Q: Why does the code look... well, a bit "unique"?
 
@@ -66,3 +77,19 @@ A: Hey, it seems to work! I’m a self-taught frontend-developer with exactly ze
 
 # License
 This project is licensed under the [MIT License](LICENSE).
+
+# Screenshots
+<table>
+  <tr>
+    <td width="45%" align="center">
+      <a href=".github/assets/ss1.png" target="_blank">
+        <img src=".github/assets/ss1.png" alt="Main Interface" width="100%">
+      </a>
+    </td>
+    <td width="45%" align="center">
+      <a href=".github/assets/ss2.png" target="_blank">
+        <img src=".github/assets/ss2.png" alt="Icon Packs Filter" width="100%">
+      </a>
+    </td>
+  </tr>
+</table>

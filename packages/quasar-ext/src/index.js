@@ -146,7 +146,7 @@ export default function (api) {
     const rawIcons = getCleanCliIcons()
     
     console.log('[icon-diet] Detected incoming icons:', rawIcons)
-    console.log('💡 fa- icons must use the fa-truncated_prefix$name format (e.g., fa-fas$user, fa-fab$aws).')
+    console.log(`💡 fa- names must be in single quotes and use the fa-truncated_prefix$name format (e.g., 'fa-fas$user', 'fa-fab$aws').`)
     if (rawIcons.length === 0) {
       console.log('🔴 [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close bi-alarm mdi-home')
       return
