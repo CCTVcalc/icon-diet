@@ -47,21 +47,32 @@ npm i
 
 # FAQ
 Q: I'm using raw SVG imports. Why do I need this extension?
+
 A: You probably don't! Manual SVG imports work totally fine in all components, and a slightly bloated DOM never killed anyone.
 
+
 Q: There are way more icon packs available in `Iconify` and `@quasar/extras`. Why are they missing here?
+
 A: Only packs that use **solid fills** (`fill`) are supported. Fonts that are partially or fully drawn with lines (`stroke`) are processed incorrectly by the current compiler stack, which often turns icons into unreadable blobs or solid black squares.
 
+
 Q: Which icon packs are supported?
+
 A: Supported out of the box are **Material Icons**, **Material Symbols**, **MDI v7**, and **Font Awesome v7**. Additionally, other packs can be used, although they cannot be configured as the default system-wide Quasar icon set (via `iconSet`): **Carbon Design System Icons**, **Heroicons Solid**, **Octicons**, **Pixelarticons**, and **Remix Icon**. Custom SVG icon uploads are also supported.
 
+
 Q: What is the `<mat>` prefix for Material Icons?
+
 A: Quasar uses no prefix for base Material Icons and short prefixes like `o_` for styles (e.g., `Outlined`). Internally and in output CSS classes, this app uses normalized prefixes such as `mat`, `mat_o`, etc., to identify Material Icon packs correctly.
 
+
 Q: Why do I see nothing instead of my two icons in one tag?
+
 A: If you list multiple non-prefixed icon names together — like `dsadadas_warning_font_download_today_ssadasd` — you might actually see 4 icons instead. Unfortunately, this app does not officially support such advanced features.
 
+
 Q: Why does the code look... well, a bit "unique"?
+
 A: Hey, it seems to work! I’m a self-taught frontend-developer with exactly zero days of commercial coding experience. The entire project was built with assistance from AI (free Google Gemini). If this tool actually becomes popular, I fully expect (and hope) the code will eventually be rewritten by pros. Pull requests, code reviews, and architectural suggestions are highly welcome! 
 
 # License
