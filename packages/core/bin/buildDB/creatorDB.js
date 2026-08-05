@@ -1,19 +1,26 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createRequire } from 'module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { config } from '../config.js'
+
+const require = createRequire(import.meta.url)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CORE_DIR = path.join(__dirname, '..', '..')
 const DB_DIR = path.join(CORE_DIR, 'data')
 const DB_PATH = path.join(DB_DIR, 'quasar-icons-db.json')
 
-const NODE_MODULES = path.join(CORE_DIR, '..', '..', 'node_modules')
-const ICONIFY_DIR = path.join(NODE_MODULES, '@iconify-json')
-const QUASAR_EXTRAS_DIR = path.join(NODE_MODULES, '@quasar', 'extras', 'exports')
+const quasarRoot = path.dirname(require.resolve('@quasar/extras/package.json'))
+const exportsPath = path.join(quasarRoot, 'exports')
+const QUASAR_EXTRAS_DIR = fs.existsSync(exportsPath) ? exportsPath : quasarRoot
+
+const ICONIFY_DIR = require.resolve.paths('./')
+  .map(p => path.join(p, '@iconify-json'))
+  .find(fs.existsSync)
 
 let quasarPkg = null
-const quasarPkgPath = path.join(NODE_MODULES, '@quasar', 'extras', 'package.json')
+const quasarPkgPath = path.join(quasarRoot, 'package.json')
 if (fs.existsSync(quasarPkgPath)) quasarPkg = fs.readFileSync(quasarPkgPath, 'utf8')
 
 let plainConfig = {}
@@ -68,19 +75,25 @@ export async function buildDatabase (force = false) {
         packJSON = await import(fileUrl)
       }
 
-      const metaPath = path.join(ICONIFY_DIR, pack.iconifyMap, 'icons.json')
-      if (fs.existsSync(metaPath)) packMetaJSON = fs.readFileSync(metaPath, 'utf8')
+      if (ICONIFY_DIR && pack.iconifyMap) {
+        const metaPath = path.join(ICONIFY_DIR, pack.iconifyMap, 'icons.json')
+        if (fs.existsSync(metaPath)) packMetaJSON = fs.readFileSync(metaPath, 'utf8')
+      }
       
       packInfo = quasarPkg
-    } else {
+    } else if (ICONIFY_DIR) {
       const filePath = path.join(ICONIFY_DIR, pack.prefix, 'icons.json')
       if (fs.existsSync(filePath)) packJSON = fs.readFileSync(filePath, 'utf8')
 
-      const metaPath = path.join(NODE_MODULES, '@iconify-json', pack.prefix, 'metadata.json')
+      const metaPath = path.join(ICONIFY_DIR, pack.prefix, 'metadata.json')
       if (fs.existsSync(metaPath)) packMetaJSON = fs.readFileSync(metaPath, 'utf8')
 
       const infoPath = path.join(ICONIFY_DIR, pack.prefix, 'info.json')
       if (fs.existsSync(infoPath)) packInfo = fs.readFileSync(infoPath, 'utf8')  
+    } else {
+      packJSON = null
+      packMetaJSON = null
+      packInfo = null
     }
 
     const info = parser.getInfo(pack, packInfo)

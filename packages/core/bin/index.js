@@ -658,6 +658,53 @@ async function runServer(customConfig = {}) {
         return
       }
 
+      if (url.pathname === '/api/update-packages' && req.method === 'POST') {
+        try {
+          const pkgPath = path.join(DEFAULT_ROOT, 'package.json')
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+          const iconifyDeps = Object.keys(pkg.dependencies || {})
+            .filter(dep => dep.startsWith('@iconify-json/'))
+          
+          const packagesToUpdate = ['@quasar/extras', ...iconifyDeps].join(' ')
+          
+          if (packagesToUpdate.trim()) {
+            let updateCmd = `npm update ${packagesToUpdate}`
+            
+            if (fs.existsSync(path.join(DEFAULT_ROOT, 'yarn.lock'))) {
+              updateCmd = `yarn upgrade ${packagesToUpdate}`
+            } else if (fs.existsSync(path.join(DEFAULT_ROOT, 'pnpm-lock.yaml'))) {
+              updateCmd = `pnpm update ${packagesToUpdate}`
+            } else if (fs.existsSync(path.join(DEFAULT_ROOT, 'bun.lockb')) || fs.existsSync(path.join(DEFAULT_ROOT, 'bun.lock'))) {
+              updateCmd = `bun update ${packagesToUpdate}`
+            }
+
+            execSync(updateCmd, { stdio: 'ignore' })
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ success: true, message: 'Packages updated successfully' }))
+        } catch (e) {
+          console.error(e)
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'Failed to update packages: ' + e.message }))
+        }
+      }
+
+      if (url.pathname === '/api/rebuild-database' && req.method === 'POST') {
+        try {
+          await buildDatabase(true)
+          await buildIconSets(true)
+          await initIconCache()
+
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ success: true, message: 'Database rebuilt successfully' }))
+        } catch (e) {
+          console.error(e)
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'Failed to rebuild database: ' + e.message }))
+        }
+      }
+
       res.writeHead(404, { 'Content-Type': 'application/json' })
       return res.end(JSON.stringify({ error: 'Not Found' }))
     }
@@ -674,53 +721,6 @@ async function runServer(customConfig = {}) {
         fs.createReadStream(filePath).pipe(res)
       })
       return
-    }
-
-    if (url.pathname === '/api/update-packages' && req.method === 'POST') {
-      try {
-        const pkgPath = path.join(DEFAULT_ROOT, 'package.json')
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-        const iconifyDeps = Object.keys(pkg.dependencies || {})
-          .filter(dep => dep.startsWith('@iconify-json/'))
-        
-        const packagesToUpdate = ['@quasar/extras', ...iconifyDeps].join(' ')
-        
-        if (packagesToUpdate.trim()) {
-          let updateCmd = `npm update ${packagesToUpdate}`
-          
-          if (fs.existsSync(path.join(DEFAULT_ROOT, 'yarn.lock'))) {
-            updateCmd = `yarn upgrade ${packagesToUpdate}`
-          } else if (fs.existsSync(path.join(DEFAULT_ROOT, 'pnpm-lock.yaml'))) {
-            updateCmd = `pnpm update ${packagesToUpdate}`
-          } else if (fs.existsSync(path.join(DEFAULT_ROOT, 'bun.lockb')) || fs.existsSync(path.join(DEFAULT_ROOT, 'bun.lock'))) {
-            updateCmd = `bun update ${packagesToUpdate}`
-          }
-
-          execSync(updateCmd, { stdio: 'ignore' })
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        return res.end(JSON.stringify({ success: true, message: 'Packages updated successfully' }))
-      } catch (e) {
-        console.error(e)
-        res.writeHead(500, { 'Content-Type': 'application/json' })
-        return res.end(JSON.stringify({ error: 'Failed to update packages: ' + e.message }))
-      }
-    }
-
-    if (url.pathname === '/api/rebuild-database' && req.method === 'POST') {
-      try {
-        await buildDatabase(true)
-        await buildIconSets(true)
-        await initIconCache()
-
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        return res.end(JSON.stringify({ success: true, message: 'Database rebuilt successfully' }))
-      } catch (e) {
-        console.error(e)
-        res.writeHead(500, { 'Content-Type': 'application/json' })
-        return res.end(JSON.stringify({ error: 'Failed to rebuild database: ' + e.message }))
-      }
     }
 
     let filePath = path.join(GUI_DIR, url.pathname === '/' ? 'index.html' : url.pathname)
