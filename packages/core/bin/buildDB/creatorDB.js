@@ -15,9 +15,9 @@ const quasarRoot = path.dirname(require.resolve('@quasar/extras/package.json'))
 const exportsPath = path.join(quasarRoot, 'exports')
 const QUASAR_EXTRAS_DIR = fs.existsSync(exportsPath) ? exportsPath : quasarRoot
 
-const ICONIFY_DIR = require.resolve.paths('./')
+const ICONIFY_DIR = (require.resolve.paths('') || [])
   .map(p => path.join(p, '@iconify-json'))
-  .find(fs.existsSync)
+  .find(fs.existsSync) || null
 
 let quasarPkg = null
 const quasarPkgPath = path.join(quasarRoot, 'package.json')

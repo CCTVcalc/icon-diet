@@ -343,6 +343,15 @@ Notes:
         : '🔍 [icon-diet] Scanning project files...'
     )
 
+    // generate meta and other files
+    if (isInit) await makeRequest({
+      ...POST_DEFAULT_OPTIONS,
+      port: backendPort,
+      path: '/api/generate'
+    }, {
+      icons: []
+    })
+
     const scanResult = await makeRequest({
       ...POST_DEFAULT_OPTIONS,
       port: backendPort,
