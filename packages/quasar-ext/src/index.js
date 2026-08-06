@@ -81,10 +81,8 @@ export default function (api) {
   }
 
   async function syncQuasarConfig () {
-    const QuasarConfigFile = require('@quasar/app-vite/lib/quasar-config-file')
-    const quasarConfFile = new QuasarConfigFile({ ctx: api.ctx })
-    const config = await quasarConfFile.get()
-    
+    const config = await api.resolveQuasarConfig()
+  
     const configIconSet = config.framework?.iconSet
     if (appPacks.includes(configIconSet)) backendEnv.EXT_ICON_SET = configIconSet
     else {
