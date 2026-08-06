@@ -18,6 +18,7 @@ The app doesn't require you to rewrite existing components or change syntax like
 
 # Installation & Setup
 ## Option 1: Quasar App Extension (Recommended)
+### Install
 ```bash
 quasar ext add icon-diet
 ```
@@ -27,6 +28,11 @@ The extension's boot file will disable previously connected fonts on the fly, bu
 quasar run icon-diet start
 ```
 Upon the first launch, the app will automatically create an `idiet` folder inside your `src` root, scan the project, compile your optimized icon font, and set up the mapping.
+
+### Uninstall
+```bash
+quasar ext remove icon-diet
+```
 
 ## Option 2: Standalone Local Utility
 ### Install

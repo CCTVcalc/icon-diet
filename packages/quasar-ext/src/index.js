@@ -81,8 +81,8 @@ export default function (api) {
   }
 
   async function syncQuasarConfig () {
-    const config = await api.resolveQuasarConfig()
-  
+    const config = api.quasarConf || {}
+
     const configIconSet = config.framework?.iconSet
     if (appPacks.includes(configIconSet)) backendEnv.EXT_ICON_SET = configIconSet
     else {
