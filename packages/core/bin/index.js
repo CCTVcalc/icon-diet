@@ -254,6 +254,10 @@ async function runServer(customConfig = {}) {
             }
 
             if (!fs.existsSync(metaPath)) {
+              if (isExt) {
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                return res.end(JSON.stringify({ icons: [], notFoundIcons: [], iconSet: ICON_SET }))
+              }
               res.writeHead(404, { 'Content-Type': 'application/json' })
               return res.end(JSON.stringify({ error: 'Project file(s) not found!' }))
             }
@@ -731,14 +735,6 @@ async function runServer(customConfig = {}) {
   })
 
   await initIconCache()
-
-  if (isExt) {
-    const bootPath = path.join(ROOT_DIR, 'src', 'idiet', 'idiet-boot.js')
-    if (!fs.existsSync(bootPath)) {
-      console.log('[icon-diet] Initial...')
-      await generateBundle([], ROOT_DIR)
-    }
-  }
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') process.exit(1)
