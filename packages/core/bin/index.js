@@ -528,7 +528,6 @@ async function runServer(customConfig = {}) {
 
       if (url.pathname === '/api/upload' && req.method === 'POST') {
         const busboy = Busboy({ headers: req.headers })
-        
         const processed = []
         const errors = []
         const filePromises = []

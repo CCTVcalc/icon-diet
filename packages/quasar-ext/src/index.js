@@ -42,7 +42,8 @@ export default function (api) {
     method: 'GET'
   }
   
-  const withSyncConfig = (fn) => async () => { await syncQuasarConfig(); await fn() }
+
+  const withSyncConfig = (fn) => async (...args) => { await syncQuasarConfig(); await fn(...args) }
 
   api.extendQuasarConf(onQuasarConfUpdate)
   api.registerCommand('start', withSyncConfig(onStartGUI))
@@ -191,17 +192,16 @@ export default function (api) {
     }
   }
   
-  async function onAddIcon () {
-    const rawIcons = getCleanCliIcons()
-    
-    console.log('[icon-diet] Detected incoming icons:', rawIcons)
-    console.log(`💡 fa- names must be in single quotes and use the fa-truncated_prefix$name format (e.g., 'fa-fas$user', 'fa-fab$aws').`)
-    if (rawIcons.length === 0) {
-      console.log('🔴 [icon-diet] Please specify icons. Example: quasar run icon-diet add-icon mdi-close bi-alarm mdi-home')
-      return
-    }
+  async function onAddIcon (cmdArgs) {
+    const rawIcons = (cmdArgs?.args || [])
+      .flatMap(arg => String(arg).split(/[\s,]+/))
+      .map(img => img.trim().replace(/['"]/g, ''))
+      .filter(Boolean)
 
     const candidates = [...new Set(rawIcons)]
+
+    console.log('[icon-diet] Detected incoming icons:', candidates)
+    console.log(`💡 fa- names must be in single quotes and use the fa-truncated_prefix$name format (e.g., 'fa-fas$user', 'fa-fab$aws').`)
 
     if (candidates.length === 0) {
       console.log('🟡 No suitable candidates found for validation.')
@@ -275,24 +275,6 @@ export default function (api) {
     console.log('✅ Web-font assets updated successfully!')
   }
 
-  // HELPER FOR ADD-ICONS
-  function getCleanCliIcons () {
-    const cleanTokens = process.argv.filter(arg => {
-      if (arg === process.execPath) return false
-      if (path.isAbsolute(arg)) return false
-      if (arg.includes('/') || arg.includes('\\')) return false
-      
-      return true
-    })
-
-    const { positionals } = parseArgs({ args: cleanTokens, strict: false })
-
-    return positionals
-      .flatMap(arg => arg.split(/[\s,]+/))
-      .map(img => img.trim().replace(/['"]/g, ''))
-      .filter(Boolean)
-  }
-  
   async function onShowFonts () {
     let backend
 
