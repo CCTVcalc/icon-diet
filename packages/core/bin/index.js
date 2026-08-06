@@ -49,10 +49,12 @@ async function runServer(customConfig = {}) {
   let db = {}
   const ALLOWED_PACKS_DB = {}
   const ICON_CACHE = new Map()
-  const ALLOWED_PREFIXES = Object.values(defaultConfig.PACKS)
-    .flatMap(category => Object.entries(category))
-    .map(([key, pack]) => pack.prefix ?? key)
-    .unshift(USER_ICON_PACK)
+  const ALLOWED_PREFIXES = [
+    USER_ICON_PACK,
+    ...Object.values(defaultConfig.PACKS)
+      .flatMap(category => Object.entries(category))
+      .map(([key, pack]) => pack.prefix ?? key)
+  ]
 
   let iconSets = []
   const SUPPORT_ICON_SET = defaultConfig.SUPPORT_ICON_SET
@@ -358,118 +360,10 @@ async function runServer(customConfig = {}) {
             const icons = parsedBody.icons || []
             const projectPath = isExt ? ROOT_DIR : (parsedBody.projectPath || ROOT_DIR)
 
-            const baseIcons = iconSets[ICON_SET]
-            const iconsToBuild = [...new Set([...baseIcons, ...icons])]
-              .map(i => ICON_CACHE.get(i))
+            const result = await generateBundle(icons, projectPath)
 
-            const { base64Css, fileLinksCss, woff2Buffer, uniquePrefixes, codepoints } = await utils.buildFontAndCss(iconsToBuild)
-
-            const README_BUFFER = fs.readFileSync(path.join(__dirname, 'templates', 'readme.txt'))
-            const BOOT_BUFFER = fs.readFileSync(path.join(__dirname, 'templates', 'idiet-boot.js'))
-            const mapFnFileContent = utils.generateIconMapFnContent(uniquePrefixes)
-
-            const userHtmlCards = []
-            const baseHtmlCards = []
-
-            Object.keys(codepoints).forEach(iconKeyName => {
-              const isBase = baseIcons.includes(iconKeyName)
-
-              let displayIconName = iconKeyName
-
-              if (iconKeyName.startsWith('fa-')) {
-                const n = iconKeyName.slice('fa-'.length)
-
-                const [style, clearName] = n.split('$')
-                const extraClass = { fas: 'fa-solid', far: 'fa-regular', fab: 'fa-brands' }[style]
-                displayIconName = `${extraClass} fa-${clearName}`
-              }
-
-              const fixMat = n => n.startsWith('mat_') ? n.slice('mat_'.length) : n
-
-              const cardHtml = `
-    <div class="card-icon-item" onclick="copyClass('${fixMat(displayIconName)}')" title="${fixMat(displayIconName)}">
-      <div class="card-icon-wrapper">
-        <i class="q-icon ${displayIconName}"></i>
-      </div>
-      <div class="card-icon-info">
-        <span class="card-icon-fullname">${fixMat(displayIconName)}</span>
-      </div>
-    </div>`
-
-              if (isBase) baseHtmlCards.push(cardHtml)
-              else userHtmlCards.push(cardHtml)
-            })
-
-            const previewHtml = previewTemplate(isExt)
-              .replace('<!-- UserIconsGrid -->', userHtmlCards.join(''))
-              .replace('<!-- BaseIconsGrid -->', baseHtmlCards.join(''))
-
-            const metaData = JSON.stringify(Object.assign(
-              isExt ? {} : { basePack: ICON_SET},
-              {
-                packs: uniquePrefixes,
-                icons
-              }
-            ))
-            
-            if (isExt) {
-              const currentProjectDir = projectPath
-              if (!currentProjectDir) {
-                throw new Error('projectPath is required for extension mode')
-              }
-
-              const targetIdietDir = path.join(currentProjectDir, 'src', 'idiet')
-              fs.mkdirSync(targetIdietDir, { recursive: true })
-
-              fs.writeFileSync(path.join(targetIdietDir, 'idiet.css'), base64Css, 'utf8')
-              fs.writeFileSync(path.join(targetIdietDir, 'idietIconMapFn.js'), mapFnFileContent, 'utf8')
-              fs.writeFileSync(path.join(targetIdietDir, 'idiet-boot.js'), BOOT_BUFFER)
-              fs.writeFileSync(path.join(targetIdietDir, 'preview.html'), previewHtml, 'utf8')
-              fs.writeFileSync(path.join(targetIdietDir, '.meta.json'), metaData, 'utf8')
-              fs.writeFileSync(path.join(targetIdietDir, 'DONT_EDIT_IN_DIR.txt'),
-                'Files in the "idiet" folder are automatically generated. \n Do not attempt to modify them manually.\n',
-                'utf8'
-              )
-
-              res.writeHead(200, { 'Content-Type': 'application/json' })
-              return res.end(JSON.stringify({ success: true, mode: 'ext' }))
-            } else {
-              const now = new Date()
-              const folderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`
-              const targetDir = path.join(ROOT_DIR, 'out', folderName)
-              const fontsDir = path.join(targetDir, 'fonts')
-              const idietDir = path.join(targetDir, 'idiet')
-              
-              fs.mkdirSync(fontsDir, { recursive: true })
-              fs.mkdirSync(idietDir, { recursive: true })
-
-              fs.writeFileSync(path.join(targetDir, 'readme.txt'), README_BUFFER, 'utf8')
-              fs.writeFileSync(path.join(targetDir, 'preview.html'), previewHtml, 'utf8')
-              fs.writeFileSync(path.join(targetDir, '.meta.json'), metaData, 'utf8')
-
-              fs.writeFileSync(path.join(idietDir, 'idiet.css'), base64Css, 'utf8')
-              fs.writeFileSync(path.join(idietDir, 'idietIconMapFn.js'), mapFnFileContent, 'utf8')
-              fs.writeFileSync(path.join(idietDir, 'idiet-boot.js'), BOOT_BUFFER)
-
-              fs.writeFileSync(path.join(fontsDir, 'idiet.woff2'), woff2Buffer)
-              fs.writeFileSync(path.join(fontsDir, '_idiet.css'), fileLinksCss, 'utf8')
-
-              const zippedData = zipSync({
-                'idiet/idiet.css': Buffer.from(base64Css, 'utf8'),
-                'idiet/idiet-boot.js': BOOT_BUFFER,
-                'idiet/idietIconMapFn.js': Buffer.from(mapFnFileContent, 'utf8'),
-                'preview.html': Buffer.from(previewHtml, 'utf8'),
-                'readme.txt': README_BUFFER,
-                'fonts/idiet.woff2': woff2Buffer,
-                'fonts/_idiet.css': Buffer.from(fileLinksCss, 'utf8')
-              })
-
-              const zipPath = path.join(targetDir, 'idiet.zip')
-              fs.writeFileSync(zipPath, zippedData)
-
-              res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify({ success: true, folder: folderName }))
-            }
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify(result))
           } catch (e) {
             console.error(e)
             res.writeHead(500, { 'Content-Type': 'application/json' })
@@ -477,6 +371,107 @@ async function runServer(customConfig = {}) {
           }
         })
         return
+      }
+
+      async function generateBundle(icons = [], projectPath = ROOT_DIR) {
+        const baseIcons = iconSets[ICON_SET] || []
+        const iconsToBuild = [...new Set([...baseIcons, ...icons])].map(i => ICON_CACHE.get(i)).filter(Boolean)
+
+        const { base64Css, fileLinksCss, woff2Buffer, uniquePrefixes, codepoints } = await utils.buildFontAndCss(iconsToBuild)
+
+        const README_BUFFER = fs.readFileSync(path.join(__dirname, 'templates', 'readme.txt'))
+        const BOOT_BUFFER = fs.readFileSync(path.join(__dirname, 'templates', 'idiet-boot.js'))
+        const mapFnFileContent = utils.generateIconMapFnContent(uniquePrefixes)
+
+        const userHtmlCards = []
+        const baseHtmlCards = []
+
+        Object.keys(codepoints).forEach(iconKeyName => {
+          const isBase = baseIcons.includes(iconKeyName)
+          let displayIconName = iconKeyName
+
+          if (iconKeyName.startsWith('fa-')) {
+            const n = iconKeyName.slice('fa-'.length)
+            const [style, clearName] = n.split('$')
+            const extraClass = { fas: 'fa-solid', far: 'fa-regular', fab: 'fa-brands' }[style]
+            displayIconName = `${extraClass} fa-${clearName}`
+          }
+
+          const fixMat = n => n.startsWith('mat_') ? n.slice('mat_'.length) : n
+
+          const cardHtml = `
+      <div class="card-icon-item" onclick="copyClass('${fixMat(displayIconName)}')" title="${fixMat(displayIconName)}">
+        <div class="card-icon-wrapper">
+          <i class="q-icon ${displayIconName}"></i>
+        </div>
+        <div class="card-icon-info">
+          <span class="card-icon-fullname">${fixMat(displayIconName)}</span>
+        </div>
+      </div>`
+
+          if (isBase) baseHtmlCards.push(cardHtml)
+          else userHtmlCards.push(cardHtml)
+        })
+
+        const previewHtml = previewTemplate(isExt)
+          .replace('<!-- UserIconsGrid -->', userHtmlCards.join(''))
+          .replace('<!-- BaseIconsGrid -->', baseHtmlCards.join(''))
+
+        const metaData = JSON.stringify(Object.assign(
+          isExt ? {} : { basePack: ICON_SET },
+          { packs: uniquePrefixes, icons }
+        ))
+
+        if (isExt) {
+          const targetIdietDir = path.join(projectPath, 'src', 'idiet')
+          fs.mkdirSync(targetIdietDir, { recursive: true })
+
+          fs.writeFileSync(path.join(targetIdietDir, 'idiet.css'), base64Css, 'utf8')
+          fs.writeFileSync(path.join(targetIdietDir, 'idietIconMapFn.js'), mapFnFileContent, 'utf8')
+          fs.writeFileSync(path.join(targetIdietDir, 'idiet-boot.js'), BOOT_BUFFER)
+          fs.writeFileSync(path.join(targetIdietDir, 'preview.html'), previewHtml, 'utf8')
+          fs.writeFileSync(path.join(targetIdietDir, '.meta.json'), metaData, 'utf8')
+          fs.writeFileSync(path.join(targetIdietDir, 'DONT_EDIT_IN_DIR.txt'),
+            'Files in the "idiet" folder are automatically generated. \n Do not attempt to modify them manually.\n',
+            'utf8'
+          )
+
+          return { success: true, mode: 'ext' }
+        } else {
+          const now = new Date()
+          const folderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`
+          const targetDir = path.join(ROOT_DIR, 'out', folderName)
+          const fontsDir = path.join(targetDir, 'fonts')
+          const idietDir = path.join(targetDir, 'idiet')
+
+          fs.mkdirSync(fontsDir, { recursive: true })
+          fs.mkdirSync(idietDir, { recursive: true })
+
+          fs.writeFileSync(path.join(targetDir, 'readme.txt'), README_BUFFER, 'utf8')
+          fs.writeFileSync(path.join(targetDir, 'preview.html'), previewHtml, 'utf8')
+          fs.writeFileSync(path.join(targetDir, '.meta.json'), metaData, 'utf8')
+
+          fs.writeFileSync(path.join(idietDir, 'idiet.css'), base64Css, 'utf8')
+          fs.writeFileSync(path.join(idietDir, 'idietIconMapFn.js'), mapFnFileContent, 'utf8')
+          fs.writeFileSync(path.join(idietDir, 'idiet-boot.js'), BOOT_BUFFER)
+
+          fs.writeFileSync(path.join(fontsDir, 'idiet.woff2'), woff2Buffer)
+          fs.writeFileSync(path.join(fontsDir, '_idiet.css'), fileLinksCss, 'utf8')
+
+          const zippedData = zipSync({
+            'idiet/idiet.css': Buffer.from(base64Css, 'utf8'),
+            'idiet/idiet-boot.js': BOOT_BUFFER,
+            'idiet/idietIconMapFn.js': Buffer.from(mapFnFileContent, 'utf8'),
+            'preview.html': Buffer.from(previewHtml, 'utf8'),
+            'readme.txt': README_BUFFER,
+            'fonts/idiet.woff2': woff2Buffer,
+            'fonts/_idiet.css': Buffer.from(fileLinksCss, 'utf8')
+          })
+
+          fs.writeFileSync(path.join(targetDir, 'idiet.zip'), zippedData)
+
+          return { success: true, folder: folderName }
+        }
       }
       
       if (url.pathname === '/api/check-icons' && req.method === 'POST') {
@@ -736,6 +731,14 @@ async function runServer(customConfig = {}) {
   })
 
   await initIconCache()
+
+  if (isExt) {
+    const bootPath = path.join(ROOT_DIR, 'src', 'idiet', 'idiet-boot.js')
+    if (!fs.existsSync(bootPath)) {
+      console.log('[icon-diet] Initial...')
+      await generateBundle([], ROOT_DIR)
+    }
+  }
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') process.exit(1)

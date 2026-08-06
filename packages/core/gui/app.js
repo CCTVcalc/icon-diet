@@ -291,9 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const current = await api.getCurrentIcons()
       if (current && current.icons && current.icons.length > 0) {
         current.icons.forEach(icon => {
-          if (!selectedIcons.has(icon.fullName)) {
-            selectedIcons.set(icon.fullName, icon)
-          }
+          if (!selectedIcons.has(icon.fullName)) selectedIcons.set(icon.fullName, icon)
         })
         renderSelectedList()
       }
