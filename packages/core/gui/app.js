@@ -915,6 +915,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.fileInput.value = ''
         dom.btnUpload.disabled = false
         dom.btnUpload.innerHTML = originalText
+        renderSelectedList()
+        renderGrid(loadedIcons)
       }
     })
   }

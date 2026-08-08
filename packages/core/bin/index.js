@@ -32,11 +32,9 @@ async function runServer(customConfig = {}) {
       ? path.join(ROOT_DIR, 'src', 'idiet', 'ext-icon') 
       : path.join(ROOT_DIR, 'ext-icon')
   
-  if (!isExt) {
-    !fs.existsSync(USER_ICON_PACK_DIR) && fs.mkdirSync(USER_ICON_PACK_DIR, { recursive: true })
-    !fs.existsSync(path.join(ROOT_DIR, 'out')) && fs.mkdirSync(path.join(ROOT_DIR, 'out'), { recursive: true })
-  }
-  
+  !fs.existsSync(USER_ICON_PACK_DIR) && fs.mkdirSync(USER_ICON_PACK_DIR, { recursive: true })
+  !isExt && !fs.existsSync(path.join(ROOT_DIR, 'out')) && fs.mkdirSync(path.join(ROOT_DIR, 'out'), { recursive: true })
+
   const MIME_TYPES = {
     '.html': 'text/html',
     '.js': 'text/javascript',
