@@ -1,7 +1,7 @@
-import { boot } from 'quasar/wrappers'
+import { defineBoot } from '#q-app'
 import './idiet.css'
 import idietIconMapFn from './idietIconMapFn.js'
 
-export default boot(({ app }) => {
+export default defineBoot(({ app }) => {
   app.config.globalProperties.$q.iconMapFn = idietIconMapFn
 })
