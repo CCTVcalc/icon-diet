@@ -193,7 +193,7 @@ export default function (api) {
   }
   
   async function onAddIcon (cmdArgs) {
-    const rawIcons = (cmdArgs?.args || [])
+    const rawIcons = (cmdArgs?.args || cmdArgs.slice(2) || [])
       .flatMap(arg => String(arg).split(/[\s,]+/))
       .map(img => img.trim().replace(/['"]/g, ''))
       .filter(Boolean)
